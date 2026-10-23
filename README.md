@@ -1,0 +1,122 @@
+# Weather Risk Intelligence Agent
+
+An AI agent that helps logistics analysts decide which distribution hubs to prioritize for weather-resilience investment. It ranks, compares and explains weather-disruption exposure for **15 real US hubs**, using 5 years of daily weather (Open-Meteo, 2021–2025) and FEMA's National Risk Index.
+
+- **Deterministic scoring.** The LLM never produces a number or a ranking. It turns the question into a JSON-schema-validated `QueryPlan`; code computes the result; the LLM explains it, and a validator rejects any number not in the result.
+- **Chat UI** (Streamlit) → **API** (FastAPI) → **agent pipeline** → **SQLite** static dataset.
+- **Eval set:** 15 cases, **15/15 on `gpt-4o-mini` across 3 runs**.
+
+## Quickstart
+
+Requires [uv](https://docs.astral.sh/uv/) and an OpenAI API key (or Anthropic, or a local Ollama).
+
+```bash
+uv sync
+cp .env.example .env          # then set OPENAI_API_KEY=...
+uv run uvicorn app.api.main:app --reload     # API on http://localhost:8000 (docs at /docs)
+uv run streamlit run ui/app.py               # chat UI on http://localhost:8501 (second terminal)
+```
+
+The dataset is committed (`data/weather.db`, `data/nri_hubs.csv`), so nothing is fetched at runtime except the LLM call.
+
+**Switch LLM provider** by editing one line in `.env`, no code change:
+`LLM_MODEL=openai/gpt-4o-mini` | `anthropic/claude-sonnet-5-5` | `ollama/llama3.2`
+
+### Try asking
+
+- Which hubs in the Midwest are most exposed to winter disruption? → then *"And for flood?"*
+- Compare Miami and Houston in terms of hurricane and flood exposure.
+- What percentage of days in Denver last year had snowfall?
+- Why is the Dallas hub's weather disruption risk high? → then *"What about Chicago?"*
+- Why is Seattle's risk so high? (false premise, which the agent corrects: Seattle is *low*)
+- How risky is Boston? / Will it snow tomorrow? (out of scope, handled explicitly)
+
+Each answer has a **"How I got this"** panel showing the plan the LLM produced and the deterministic result it explained.
+
+## How it works
+
+```
+Streamlit ──HTTP──▶ FastAPI /chat ──▶ interpret (LLM → QueryPlan, schema-validated)
+                                     ──▶ execute   (pure Python: rank / compare / stat / explain)
+                                     ──▶ narrate   (LLM → Answer, every number checked against the result)
+```
+
+| Layer | Path | Role |
+|---|---|---|
+| Domain | `app/domain/` | Hub registry, metrics, **scoring**, tool executors. Pure, no I/O. |
+| Data | `app/data/db.py` | SQLite schema and reads |
+| Agent | `app/agent/` | `QueryPlan` and `Answer` schemas, Instructor LLM client, prompts, pipeline, session memory |
+| API | `app/api/` | `POST /chat`, plus `GET /hubs`, `/hubs/{hub}`, `/rankings`, `/health` (no LLM) |
+| UI | `ui/app.py` | Chat; talks to the API only |
+| Offline | `scripts/` | Build the NRI subset, ingest Open-Meteo, print the score report, export the session |
+
+**Scoring** (full spec: [`docs/02-scoring-model.md`](docs/02-scoring-model.md)):
+- Each hazard (winter, hurricane, flood, heat, severe storms) gets a 0–100 score blending two sources:
+  - observed 2021–2025 day counts, scaled against fixed caps
+  - the hub county's national percentile in FEMA NRI for how often the hazard occurs
+- The composite is a weighted sum (hurricane 0.25, flood 0.25, winter 0.20, severe storms 0.20, heat 0.10), labelled low (< 35), medium (35–55) or high (≥ 55).
+- Contributions add up exactly to the composite, so "why is X high" is answered from the breakdown.
+- All weights and thresholds live in [`config/scoring.toml`](config/scoring.toml).
+
+**AI boundary** (full spec: [`docs/01-requirements.md`](docs/01-requirements.md) §6):
+- **The LLM:** classifies intent, extracts parameters, resolves follow-ups, writes the answer.
+- **Code:** resolves hub names (only the 15 hubs; unknown cities get a scope message), validates years, computes every number, checks the user's premise, attaches uncertainty flags.
+
+**Data storage:** SQLite, a single committed file of about 2.7 MB with 27,390 daily rows.
+- Built into Python, no extra service to run.
+- Supports SQL for the raw stats.
+- The demo runs offline.
+- Scores are computed in memory at startup from the data plus `scoring.toml`.
+- Hubs are configuration in `data/hubs.json`.
+
+## Tests and evaluation
+
+```bash
+uv run pytest            # 137 unit, pipeline, API and UI tests; no network, no LLM
+uv run pytest -m eval -v # 15 end-to-end cases with the real LLM (needs a key)
+```
+
+The eval set (`tests/eval/cases.json`) covers:
+- the 4 assignment questions
+- follow-ups
+- aliases ("KC", "St Louis")
+- a non-hub city, mixed valid and invalid hubs, a year outside 2021–2025
+- a forecast request, an ROI question, a false premise
+
+Each case checks:
+- the plan (tool and arguments)
+- the deterministic outcome (expected top hub, premise check)
+- that every number in the answer comes from the result
+
+Latest result: **15/15, stable over 3 runs** on `openai/gpt-4o-mini`. The eval caught one real bug, now fixed: a hub mention written as "Chicago (Wheeling), IL" wasn't recognised.
+
+## Assumptions, uncertainty and scope
+
+- **Hubs:** 15 real FedEx facilities, used as a stand-in for "our" network (14 from FedEx Ground's hub list, plus the FedEx Express Miami gateway). Weather is taken at the hub city's coordinates; NRI at the county containing it.
+- **Window:** 2021–2025 (static). "Last year" means 2025.
+- **History ≠ future:** this ranks *exposure*, not the probability of next year's losses. There is no cost modelling (no financial data).
+- **Hurricanes:** 5 years of data is too short to measure them, so hurricane exposure comes from FEMA NRI alone (flagged `single_source`).
+- **Open-Meteo is reanalysis data** (~10 km grid). Snowfall and wind gusts are modeled, not measured at stations.
+- **NRI is county-level.** Large counties blur conditions at the site; for example, King County includes the Cascades. When the two sources differ by 50 or more points, the hazard is flagged `sources_disagree`.
+- **Heat:** NRI defines heat waves *relative to local climate*, while the observed metric counts absolute ≥ 35 °C days. That's why heat disagreements are common.
+- **Out of scope:** forecasts, ROI, non-hub locations, years outside 2021–2025. The agent says so instead of guessing.
+- **Deferred:** score-change alerts (bonus), deployment, voice input.
+
+## Documentation
+
+| Doc | Contents |
+|---|---|
+| [`docs/01-requirements.md`](docs/01-requirements.md) | Business context, hub list, query types, deterministic vs. AI boundary |
+| [`docs/02-scoring-model.md`](docs/02-scoring-model.md) | Exact scoring formula, calibration table, uncertainty flags |
+| [`docs/03-architecture.md`](docs/03-architecture.md) | **Design doc**: components, data flow, DB schema, API, agent tools, repo structure, storage choice |
+| [`docs/04-implementation-plan.md`](docs/04-implementation-plan.md) | The step-by-step test-first plan this was built from |
+| [`docs/session/`](docs/session/) | Full Claude Code session: requirements, design, plan and implementation |
+| [`CLAUDE.md`](CLAUDE.md) | Architecture rules, coding standards, git workflow |
+
+### Rebuilding the dataset (optional)
+
+```bash
+uv run python -m scripts.build_nri_subset   # FEMA NRI → data/nri_hubs.csv
+uv run python -m scripts.ingest             # Open-Meteo → data/weather.db (~1 min, throttled)
+uv run python -m scripts.score_report       # print the scorebook
+```
