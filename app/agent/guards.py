@@ -31,6 +31,13 @@ _UNANSWERABLE = re.compile(
     r"predict\w*|trends?|roi|return on|costs?|prices?|budget|invest\w*|insurance|dollars?)\b|\$",
     re.IGNORECASE,
 )
+# Hurricanes, floods and storms come from static FEMA NRI: there are no daily counts to ask for.
+_HAZARD_COUNT = re.compile(
+    r"\b(hurricanes?|flood(s|ing)?|(severe[- ])?storms?|tornado(es|s)?|hail)\s+"
+    r"(days?|events?|counts?)\b|\bhow many (hurricanes|floods|storms|tornado(es|s)?)\b|"
+    r"\bdays\b.*\b(had|with)\s+(flooding|hurricanes?|tornado(es|s)?|hail)\b",
+    re.IGNORECASE,
+)
 _YEAR = re.compile(r"\b(19|20)\d{2}\b")
 
 
@@ -40,6 +47,6 @@ def filter_followups(
     def answerable(q: str) -> bool:
         years = [int(m.group()) for m in _YEAR.finditer(q)]
         in_window = all(first_year <= y <= last_year for y in years)
-        return in_window and not _UNANSWERABLE.search(q)
+        return in_window and not _UNANSWERABLE.search(q) and not _HAZARD_COUNT.search(q)
 
     return [q for q in followups if answerable(q)]
