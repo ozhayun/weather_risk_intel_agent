@@ -98,7 +98,9 @@ def rank_hubs(
     pool = named or ctx.registry.all()
     ids = [h.hub_id for h in pool if region is None or h.region == region]
     key = None if hazard == "overall" else hazard
-    ranked = ctx.book.ranked(key, hub_ids=ids)[: top_n or None]
+    ranked = ctx.book.ranked(key, hub_ids=ids)
+    if top_n and top_n > 0:
+        ranked = ranked[:top_n]
     rows = []
     for position, s in enumerate(ranked, start=1):
         value = s.composite if key is None else s.hazards[key].score

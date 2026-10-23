@@ -116,3 +116,7 @@ def test_explain_without_premise(ctx):
 
 def test_explain_unknown_hub(ctx):
     assert explain_hub(ctx, "Springfield").kind == "scope"
+
+
+def test_rank_non_positive_top_n_returns_all(ctx):
+    assert len(rank_hubs(ctx, top_n=-1).rows) == 3
