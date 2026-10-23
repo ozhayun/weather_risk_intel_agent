@@ -55,6 +55,8 @@ def check_result(out, exp: dict, ctx) -> None:
             f"plan={out.plan.model_dump_json()} result={result and result.kind}"
         )
         return
+    if "result_kind" in exp:
+        assert result is not None and result.kind == exp["result_kind"], out.answer.text
     if "top_hub" in exp:
         assert result.rows[0].hub_id == exp["top_hub"]
     if "premise_holds" in exp:
