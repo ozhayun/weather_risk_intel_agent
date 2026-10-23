@@ -211,5 +211,31 @@
   "expect": {
    "scope_or_clarify": true
   }
+ },
+ {
+  "id": "hurricane_days",
+  "turns": [
+   "How many hurricane days did Miami have in 2024?"
+  ],
+  "expect": {
+   "tool": "clarify",
+   "answer_contains": [
+    "NRI",
+    "National Risk Index"
+   ]
+  }
+ },
+ {
+  "id": "single_hub_hazard",
+  "turns": [
+   "How exposed is Dallas to flood?"
+  ],
+  "expect": {
+   "tool": "rank_hubs",
+   "hazard": "flood",
+   "hubs": [
+    "dallas"
+   ]
+  }
  }
 ]
