@@ -57,7 +57,7 @@ class Clarify(BaseModel):
     """Ask the user a question instead of running a tool."""
 
     tool: Literal["clarify"]
-    question: str
+    question: str = Field(max_length=500)
     reason: Literal["ambiguous", "out_of_scope", "unsupported"]
 
 
