@@ -41,6 +41,11 @@ _HAZARD_COUNT = re.compile(
 _YEAR = re.compile(r"\b(19|20)\d{2}\b")
 
 
+def asks_hazard_event_count(text: str) -> bool:
+    """'How many flood/storm/hurricane days…': data the daily weather does not have."""
+    return bool(_HAZARD_COUNT.search(text))
+
+
 def filter_followups(
     followups: list[str], first_year: int = 2021, last_year: int = 2025
 ) -> list[str]:
