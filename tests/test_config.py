@@ -24,3 +24,18 @@ def test_hubs_json_has_15_hubs_6_midwest():
 def test_settings_default_model(monkeypatch):
     monkeypatch.delenv("LLM_MODEL", raising=False)
     assert Settings(_env_file=None).llm_model == "openai/gpt-4o-mini"
+
+
+def test_export_env_file_sets_provider_keys_without_overriding(tmp_path, monkeypatch):
+    from app.config import export_env_file
+
+    env = tmp_path / ".env"
+    env.write_text("WRIA_TEST_KEY=from-file\nWRIA_TEST_KEEP=from-file\n")
+    monkeypatch.delenv("WRIA_TEST_KEY", raising=False)
+    monkeypatch.setenv("WRIA_TEST_KEEP", "from-shell")
+    export_env_file(env)
+    import os
+
+    assert os.environ["WRIA_TEST_KEY"] == "from-file"
+    assert os.environ["WRIA_TEST_KEEP"] == "from-shell"
+    monkeypatch.delenv("WRIA_TEST_KEY")
