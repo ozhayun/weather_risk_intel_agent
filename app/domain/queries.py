@@ -51,7 +51,9 @@ def _scope(ctx: QueryContext, reason, message: str, unknown: list[str] | None = 
         reason=reason,
         unknown=unknown or [],
         supported_hubs=names,
-        message=f"{message} I cover these {len(names)} hubs: {', '.join(names)}.",
+        message=message
+        if reason == "period_out_of_range"  # the hub is fine; listing hubs would be noise
+        else f"{message} I cover these {len(names)} hubs: {', '.join(names)}.",
     )
 
 
@@ -183,7 +185,8 @@ def get_weather_stat(
         return _scope(
             ctx,
             "period_out_of_range",
-            f"I only have weather data for {ctx.window_label}, not {period}.",
+            f"I only have weather data for {ctx.window_label}, not {period}. "
+            f"Ask about any year from {ctx.window_label} instead.",
         )
     start, end, label, years = bounds
     days = filter_period(ctx.daily.get(resolved[0].hub_id, []), start, end)
