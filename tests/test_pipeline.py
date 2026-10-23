@@ -107,3 +107,20 @@ def test_lowest_order_reaches_the_executor(ctx):
     llm = FakeLLM([plan(tool="rank_hubs", order="lowest"), ANSWER])
     out = Agent(llm, ctx).run("s1", "Which hub is safest?")
     assert out.result.order == "lowest" and out.result.rows[0].hub_id == "c"
+
+
+def test_clarify_turns_do_not_leak_their_plan_into_history(ctx):
+    clarify = plan(tool="clarify", question="No hurricane counts.", reason="hazard_count")
+    llm = FakeLLM([clarify, plan(tool="rank_hubs"), ANSWER])
+    agent = Agent(llm, ctx)
+    agent.run("s1", "How many hurricane days did Alpha have in 2025?")
+    agent.run("s1", "How many heavy rain days did Alpha have in 2025?")
+    second = text_of(llm.calls[1].messages[1:])  # conversation only, not the system rules
+    assert "hazard_count" not in second and "No hurricane counts." not in second
+    assert "asked a clarifying question" in second
+
+
+def test_hazard_count_text_only_when_message_mentions_hazard_events(ctx):
+    llm = FakeLLM([plan(tool="clarify", question="Which year?", reason="hazard_count")])
+    out = Agent(llm, ctx).run("s1", "How many heavy rain days did Alpha have in 2025?")
+    assert "FEMA NRI" not in out.answer.text and out.answer.text == "Which year?"
