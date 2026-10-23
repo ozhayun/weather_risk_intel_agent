@@ -5,6 +5,7 @@ import os
 
 import httpx
 import streamlit as st
+import streamlit.components.v1 as components
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -23,6 +24,16 @@ SIDEBAR_CSS = """
 section[data-testid="stSidebar"] { width: 600px !important; min-width: 600px !important; }
 </style>
 """
+# Streamlit has no autofocus option; a zero-height component focuses the chat box after each
+# render. The counter changes the markup so the iframe (and its script) re-mounts every rerun.
+FOCUS_JS = """<script>/* render {n} */
+let tries = 0;  // the chat box may mount after this iframe: retry for up to ~2 s
+const timer = setInterval(() => {{
+  const box = window.parent.document.querySelector('[data-testid="stChatInputTextArea"]');
+  if (box && !box.disabled) {{ box.focus(); clearInterval(timer); }}
+  if (++tries > 20) clearInterval(timer);
+}}, 100);
+</script>"""
 ROW_PX = 35  # st.dataframe row height; header counts as one row
 
 
@@ -218,6 +229,9 @@ st.chat_input(
 messages = st.session_state.messages
 for i, msg in enumerate(messages):
     render_message(i, msg, latest=i == len(messages) - 1 and not busy())
+
+if not busy():
+    components.html(FOCUS_JS.format(n=len(messages)), height=0)
 
 if st.session_state.pending:
     with st.chat_message("assistant"), st.spinner("Thinking…"):
