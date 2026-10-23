@@ -36,6 +36,8 @@ Each answer has a **"How I got this"** panel showing the plan the LLM produced a
 
 ## How it works
 
+![Architecture](docs/architecture.svg)
+
 ```
 Streamlit ──HTTP──▶ FastAPI /chat ──▶ interpret (LLM → QueryPlan, schema-validated)
                                      ──▶ execute   (pure Python: rank / compare / stat / explain)
@@ -131,6 +133,13 @@ Ablation check: with these protections removed, the follow-up tests fail (reprod
 - **Out of scope:** forecasts, ROI, non-hub locations, years outside 2021–2025, and rankings for a single year (scores cover the whole window; per-year stats work for one hub). The agent says so instead of guessing.
 - **Deferred:** score-change alerts (bonus), deployment, voice input.
 
+## Requirements coverage
+
+Every core requirement in `ASSIGNMENT.pdf` is implemented and tested; the full audit table is in [`docs/01-requirements.md` §7](docs/01-requirements.md). Not done:
+- **Voice input (bonus).**
+- **Score-change alert (bonus):** designed in `docs/02-scoring-model.md` §7, not built.
+- **Deployment to a URL (preferred, not mandatory):** runs locally.
+
 ## Documentation
 
 | Doc | Contents |
@@ -138,6 +147,7 @@ Ablation check: with these protections removed, the follow-up tests fail (reprod
 | [`docs/01-requirements.md`](docs/01-requirements.md) | Business context, hub list, query types, deterministic vs. AI boundary |
 | [`docs/02-scoring-model.md`](docs/02-scoring-model.md) | Exact scoring formula, calibration table, uncertainty flags |
 | [`docs/03-architecture.md`](docs/03-architecture.md) | **Design doc**: components, data flow, DB schema, API, agent tools, repo structure, storage choice |
+| [`docs/architecture.svg`](docs/architecture.svg) | Architecture diagram |
 | [`docs/04-implementation-plan.md`](docs/04-implementation-plan.md) | The step-by-step test-first plan this was built from |
 | [`docs/session/`](docs/session/) | Full Claude Code session: requirements, design, plan and implementation |
 | [`CLAUDE.md`](CLAUDE.md) | Architecture rules, coding standards, git workflow |
