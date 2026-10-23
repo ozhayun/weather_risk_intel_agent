@@ -1,33 +1,215 @@
 [
-  {"id": "midwest_winter", "turns": ["Which hubs in the Midwest are most exposed to winter disruption?"],
-   "expect": {"tool": "rank_hubs", "hazard": "winter", "region": "midwest", "top_hub": "minneapolis"}},
-  {"id": "compare_miami_houston", "turns": ["Compare Miami and Houston in terms of hurricane and flood exposure."],
-   "expect": {"tool": "compare_hubs", "hubs": ["miami", "houston"], "hazards_include": ["hurricane", "flood"]}},
-  {"id": "denver_snow", "turns": ["What percentage of days in Denver last year had snowfall?"],
-   "expect": {"tool": "get_weather_stat", "hubs": ["denver"], "metric": "snow_day", "aggregation": "pct_of_days",
-              "period": ["last_year", 2025], "answer_contains": "10.1"}},
-  {"id": "dallas_why", "turns": ["Why is the Dallas hub's weather disruption risk high?"],
-   "expect": {"tool": "explain_hub", "hubs": ["dallas"], "asserted_level": "high", "premise_holds": true}},
-  {"id": "followup_chicago", "turns": ["Why is the Dallas hub's weather disruption risk high?", "What about Chicago?"],
-   "expect": {"tool": "explain_hub", "hubs": ["chicago"], "asserted_level": null}},
-  {"id": "followup_hazard", "turns": ["Which hubs in the Midwest are most exposed to winter disruption?", "And for flood?"],
-   "expect": {"tool": "rank_hubs", "hazard": "flood", "region": "midwest"}},
-  {"id": "top3_overall", "turns": ["What are the top 3 riskiest hubs overall?"],
-   "expect": {"tool": "rank_hubs", "hazard": "overall", "top_n": 3, "top_hub": "houston"}},
-  {"id": "heat_south", "turns": ["Rank the southern hubs by heat exposure."],
-   "expect": {"tool": "rank_hubs", "hazard": "heat", "region": "south"}},
-  {"id": "non_hub_city", "turns": ["How risky is the Boston hub?"],
-   "expect": {"scope_or_clarify": true}},
-  {"id": "mixed_hubs", "turns": ["Compare Miami and Tokyo."],
-   "expect": {"scope_or_clarify": true, "answer_contains": "Tokyo"}},
-  {"id": "year_out_of_range", "turns": ["How many snow days did Denver have in 2019?"],
-   "expect": {"scope_or_clarify": true}},
-  {"id": "forecast", "turns": ["Will it snow in Denver tomorrow?"],
-   "expect": {"tool": "clarify"}},
-  {"id": "roi", "turns": ["What's the ROI of a resilience upgrade at the Miami hub?"],
-   "expect": {"tool": "clarify"}},
-  {"id": "false_premise", "turns": ["Why is Seattle's weather risk so high?"],
-   "expect": {"tool": "explain_hub", "hubs": ["seattle"], "premise_holds": false}},
-  {"id": "alias", "turns": ["Is KC more exposed to severe storms than St Louis?"],
-   "expect": {"tool": "compare_hubs", "hubs": ["kansas_city", "st_louis"], "hazards_include": ["severe_storms"]}}
+ {
+  "id": "midwest_winter",
+  "turns": [
+   "Which hubs in the Midwest are most exposed to winter disruption?"
+  ],
+  "expect": {
+   "tool": "rank_hubs",
+   "hazard": "winter",
+   "region": "midwest",
+   "top_hub": "minneapolis"
+  }
+ },
+ {
+  "id": "compare_miami_houston",
+  "turns": [
+   "Compare Miami and Houston in terms of hurricane and flood exposure."
+  ],
+  "expect": {
+   "tool": "compare_hubs",
+   "hubs": [
+    "miami",
+    "houston"
+   ],
+   "hazards_include": [
+    "hurricane",
+    "flood"
+   ]
+  }
+ },
+ {
+  "id": "denver_snow",
+  "turns": [
+   "What percentage of days in Denver last year had snowfall?"
+  ],
+  "expect": {
+   "tool": "get_weather_stat",
+   "hubs": [
+    "denver"
+   ],
+   "metric": "snow_day",
+   "aggregation": "pct_of_days",
+   "period": [
+    "last_year",
+    2025
+   ],
+   "answer_contains": "10.1"
+  }
+ },
+ {
+  "id": "dallas_why",
+  "turns": [
+   "Why is the Dallas hub's weather disruption risk high?"
+  ],
+  "expect": {
+   "tool": "explain_hub",
+   "hubs": [
+    "dallas"
+   ],
+   "asserted_level": "high",
+   "premise_holds": true
+  }
+ },
+ {
+  "id": "followup_chicago",
+  "turns": [
+   "Why is the Dallas hub's weather disruption risk high?",
+   "What about Chicago?"
+  ],
+  "expect": {
+   "tool": "explain_hub",
+   "hubs": [
+    "chicago"
+   ],
+   "asserted_level": null
+  }
+ },
+ {
+  "id": "followup_hazard",
+  "turns": [
+   "Which hubs in the Midwest are most exposed to winter disruption?",
+   "And for flood?"
+  ],
+  "expect": {
+   "tool": "rank_hubs",
+   "hazard": "flood",
+   "region": "midwest"
+  }
+ },
+ {
+  "id": "top3_overall",
+  "turns": [
+   "What are the top 3 riskiest hubs overall?"
+  ],
+  "expect": {
+   "tool": "rank_hubs",
+   "hazard": "overall",
+   "top_n": 3,
+   "top_hub": "houston"
+  }
+ },
+ {
+  "id": "heat_south",
+  "turns": [
+   "Rank the southern hubs by heat exposure."
+  ],
+  "expect": {
+   "tool": "rank_hubs",
+   "hazard": "heat",
+   "region": "south"
+  }
+ },
+ {
+  "id": "non_hub_city",
+  "turns": [
+   "How risky is the Boston hub?"
+  ],
+  "expect": {
+   "scope_or_clarify": true
+  }
+ },
+ {
+  "id": "mixed_hubs",
+  "turns": [
+   "Compare Miami and Tokyo."
+  ],
+  "expect": {
+   "scope_or_clarify": true,
+   "answer_contains": "Tokyo"
+  }
+ },
+ {
+  "id": "year_out_of_range",
+  "turns": [
+   "How many snow days did Denver have in 2019?"
+  ],
+  "expect": {
+   "scope_or_clarify": true
+  }
+ },
+ {
+  "id": "forecast",
+  "turns": [
+   "Will it snow in Denver tomorrow?"
+  ],
+  "expect": {
+   "tool": "clarify"
+  }
+ },
+ {
+  "id": "roi",
+  "turns": [
+   "What's the ROI of a resilience upgrade at the Miami hub?"
+  ],
+  "expect": {
+   "tool": "clarify"
+  }
+ },
+ {
+  "id": "false_premise",
+  "turns": [
+   "Why is Seattle's weather risk so high?"
+  ],
+  "expect": {
+   "tool": "explain_hub",
+   "hubs": [
+    "seattle"
+   ],
+   "premise_holds": false
+  }
+ },
+ {
+  "id": "alias",
+  "turns": [
+   "Is KC more exposed to severe storms than St Louis?"
+  ],
+  "expect": {
+   "tool": "compare_hubs",
+   "hubs": [
+    "kansas_city",
+    "st_louis"
+   ],
+   "hazards_include": [
+    "severe_storms"
+   ]
+  }
+ },
+ {
+  "id": "rank_in_2019",
+  "turns": [
+   "Rank the hubs by winter risk in 2019."
+  ],
+  "expect": {
+   "scope_or_clarify": true
+  }
+ },
+ {
+  "id": "rank_single_year",
+  "turns": [
+   "Which hub had the most snow days in 2023?"
+  ],
+  "expect": {
+   "scope_or_clarify": true
+  }
+ },
+ {
+  "id": "stat_this_year",
+  "turns": [
+   "How many snow days has Denver had this year?"
+  ],
+  "expect": {
+   "scope_or_clarify": true
+  }
+ }
 ]
