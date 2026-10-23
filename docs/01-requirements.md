@@ -87,7 +87,7 @@ Each hazard gets a sub-score from 0 to 100. A weighted composite gives the overa
 - Explanation data: component contributions, rank, percentile
 - Uncertainty data: coverage and confidence flags, caveats
 - Schema validation of all LLM output (retry or clarify on failure)
-- Alerting (bonus): recompute → diff against the last stored score → alert on threshold crossing
+- Alerting (bonus, deferred): recompute → diff against the last stored score → alert on threshold crossing
 
 ### AI (LLM)
 - Classify the intent (Q1–Q6) and extract parameters → **JSON-schema-validated query plan**
@@ -110,7 +110,7 @@ Each hazard gets a sub-score from 0 to 100. A weighted composite gives the overa
 | Conversational follow-ups | Q5 |
 | Deterministic scoring | §6 |
 | Chat interface (voice bonus) | Frontend |
-| Alert on score change (bonus) | §6 alerting |
+| Alert on score change (bonus) | Deferred (see architecture §10) |
 | Agent exposed via API | Backend |
 | JSON schema between LLM and code | §6 guardrails |
 | Eval set + runner | Eval module |
