@@ -92,3 +92,10 @@ def test_followup_button_sends_followup(live_api):
     at.chat_input[0].set_value("winter ranking").run()
     at.button(key="fu-1-0").click().run()
     assert at.session_state.messages[-2]["content"] == "Why is Minneapolis's risk medium?"
+
+
+def test_model_info_is_the_last_sidebar_element(live_api):
+    at = AppTest.from_file("../ui/app.py", default_timeout=15).run()
+    elements = list(at.sidebar)
+    assert elements[-1].type == "caption"
+    assert elements[-1].value.startswith("Model ")
