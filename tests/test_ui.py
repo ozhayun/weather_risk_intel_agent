@@ -67,7 +67,15 @@ def test_sidebar_ranking_shows_all_15_hubs_without_scrolling(live_api):
     at = AppTest.from_file("../ui/app.py", default_timeout=15).run()
     table = at.sidebar.dataframe[0]
     assert len(table.value) == 15
-    assert list(table.value.columns) == ["#", "hub", "region", "risk", "label", "peak"]
+    assert list(table.value.columns) == [
+        "#",
+        "hub",
+        "region",
+        "Overall Risk",
+        "label",
+        "Dominant Hazard",
+    ]
+    assert at.sidebar.header[0].value == "Hub Multi-Hazard risk ranking"
 
 
 def test_example_question_runs_a_turn_and_reenables_input(live_api):
