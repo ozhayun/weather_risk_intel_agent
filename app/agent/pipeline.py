@@ -1,6 +1,7 @@
 """interpret (LLM) → execute (deterministic) → narrate (LLM)."""
 
 import logging
+import re
 from dataclasses import dataclass
 
 from app.agent.guards import REFUSAL, filter_followups, leaks_instructions
@@ -26,6 +27,7 @@ from app.domain.queries import (
 from app.domain.results import Result
 
 log = logging.getLogger(__name__)
+_HAZARD_EVENTS = re.compile(r"hurricane|flood|storm|tornado|hail", re.IGNORECASE)
 
 INTERPRET_FAILED = (
     "I couldn't interpret that — try rephrasing, e.g. 'Rank Midwest hubs by winter risk'."
@@ -61,7 +63,9 @@ class Agent:
     def run(self, session_id: str, message: str) -> ChatOutcome:
         history = self.sessions.setdefault(session_id, [])
         outcome = self._run(message, history[-self.history_turns :])
-        plan_json = outcome.plan.model_dump_json() if outcome.plan else None
+        # Clarify plans stay out of history: replaying them made the model repeat refusals.
+        executed = outcome.plan and not isinstance(outcome.plan.action, Clarify)
+        plan_json = outcome.plan.model_dump_json() if executed else None
         history.append(Turn(message, plan_json))
         return outcome
 
@@ -77,8 +81,8 @@ class Agent:
         if isinstance(plan.action, Clarify):
             question = plan.action.question
             text = REFUSAL if leaks_instructions(question) else question
-            if plan.action.reason == "hazard_count":  # a fact code owns, not LLM wording
-                text = HAZARD_COUNT
+            if plan.action.reason == "hazard_count" and _HAZARD_EVENTS.search(message):
+                text = HAZARD_COUNT  # a fact code owns, not LLM wording
             return ChatOutcome(Answer(text=text), plan, None)
         try:
             result = self.execute(plan)
