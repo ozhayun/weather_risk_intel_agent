@@ -23,6 +23,9 @@ class RankQuery(BaseModel):
     region: Region | None = None
     hubs: list[str] = Field(default=[], description="City names exactly as the user wrote them")
     top_n: Annotated[int, Field(ge=1)] | None = None
+    order: Literal["highest", "lowest"] = Field(
+        default="highest", description="'lowest' for safest / least exposed hubs"
+    )
 
 
 class CompareQuery(BaseModel):
@@ -58,7 +61,7 @@ class Clarify(BaseModel):
 
     tool: Literal["clarify"]
     question: str = Field(max_length=500)
-    reason: Literal["ambiguous", "out_of_scope", "unsupported"]
+    reason: Literal["ambiguous", "out_of_scope", "unsupported", "hazard_count"]
 
 
 Action = RankQuery | CompareQuery | StatQuery | ExplainQuery | Clarify

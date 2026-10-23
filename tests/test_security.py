@@ -127,3 +127,45 @@ def test_narrate_prompt_lists_supported_hubs_and_followup_rules(ctx):
     content = "\n".join(m["content"] for m in system)
     assert "Alpha" in content and "Beta" in content
     assert "Never suggest seasons" in NARRATE_RULES
+
+
+@pytest.mark.parametrize(
+    "followup",
+    [
+        "How many hurricane days did Miami have in 2024?",
+        "What percentage of days in Houston had flooding in 2023?",
+        "How many flood days did Houston have in 2025?",
+        "How many severe storm days did Dallas have in 2022?",
+        "How many hurricanes hit Miami in 2024?",
+        "How many tornado days did Kansas City see in 2023?",
+        "How many hail events did Denver have in 2025?",
+    ],
+)
+def test_filter_drops_hazard_event_counts_not_in_daily_data(followup):
+    assert filter_followups([followup]) == []
+
+
+@pytest.mark.parametrize(
+    "followup",
+    [
+        "How many extreme cold days did Minneapolis have in 2024?",
+        "How many heavy rain days did Houston have in 2023?",
+        "How many high wind days did Dallas have in 2022?",
+        "Compare Miami and Houston on hurricane exposure.",
+        "Why is Miami's hurricane exposure so high?",
+    ],
+)
+def test_filter_keeps_supported_day_stats_and_hazard_exposure(followup):
+    assert filter_followups([followup]) == [followup]
+
+
+def test_narrate_rules_restrict_day_statistics():
+    assert "Never suggest counting hurricane days, flood days or severe-storm days" in NARRATE_RULES
+
+
+def test_interpret_rules_state_hurricane_is_static_nri():
+    assert "static FEMA NRI" in INTERPRET_RULES
+
+
+def test_narrate_rules_define_percentile_direction():
+    assert "P% of US counties have a LOWER frequency" in NARRATE_RULES

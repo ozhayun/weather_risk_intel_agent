@@ -98,6 +98,7 @@ def rank_hubs(
     region: Region | None = None,
     hubs: list[str] | None = None,
     top_n: int | None = None,
+    order: Literal["highest", "lowest"] = "highest",
 ) -> RankResult | ScopeResult:
     named, scope = _resolve(ctx, hubs or [])
     if scope:
@@ -105,7 +106,7 @@ def rank_hubs(
     pool = named or ctx.registry.all()
     ids = [h.hub_id for h in pool if region is None or h.region == region]
     key = None if hazard == "overall" else hazard
-    ranked = ctx.book.ranked(key, hub_ids=ids)
+    ranked = ctx.book.ranked(key, hub_ids=ids, lowest_first=order == "lowest")
     if top_n and top_n > 0:
         ranked = ranked[:top_n]
     rows = []
@@ -126,7 +127,11 @@ def rank_hubs(
         )
     in_scope = list(ctx.cfg.hazards) if key is None else [key]
     return RankResult(
-        hazard=hazard, region=region, rows=rows, caveats=_caveats(ctx, ranked, in_scope)
+        hazard=hazard,
+        region=region,
+        order=order,
+        rows=rows,
+        caveats=_caveats(ctx, ranked, in_scope),
     )
 
 

@@ -25,6 +25,7 @@ class RankResult(BaseModel):
     kind: Literal["rank"] = "rank"
     hazard: Hazard | Literal["overall"]
     region: Region | None
+    order: Literal["highest", "lowest"]  # "lowest": rows run from least to most exposed
     rows: list[RankRow]
     caveats: list[str]
 

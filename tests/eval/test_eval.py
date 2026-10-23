@@ -37,7 +37,7 @@ def plan_hub_ids(action, ctx) -> set[str]:
 def check_plan(action, exp: dict, ctx) -> None:
     if "tool" in exp:
         assert action.tool == exp["tool"]
-    for key in ("hazard", "region", "metric", "aggregation", "top_n", "asserted_level"):
+    for key in ("hazard", "region", "metric", "aggregation", "top_n", "asserted_level", "order"):
         if key in exp:
             assert getattr(action, key) == exp[key], key
     if "period" in exp:
@@ -74,5 +74,7 @@ def test_eval_case(case, real_ctx, llm):
     assert out.plan is not None, out.answer.text
     check_plan(out.plan.action, exp, real_ctx)
     check_result(out, exp, real_ctx)
-    if "answer_contains" in exp:
-        assert exp["answer_contains"] in out.answer.text
+    if "answer_contains" in exp:  # a string, or a list of acceptable alternatives
+        wanted = exp["answer_contains"]
+        options = wanted if isinstance(wanted, list) else [wanted]
+        assert any(o in out.answer.text for o in options), out.answer.text

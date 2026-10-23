@@ -94,3 +94,16 @@ def test_execute_failure_is_graceful(ctx, monkeypatch):
     out = agent.run("s1", "q")
     assert out.result is None and out.plan == RANK
     assert "couldn't compute" in out.answer.text
+
+
+def test_hazard_count_clarify_uses_deterministic_nri_explanation(ctx):
+    llm = FakeLLM([plan(tool="clarify", question="Nope.", reason="hazard_count")])
+    out = Agent(llm, ctx).run("s1", "How many hurricane days did Alpha have in 2025?")
+    assert "static FEMA NRI" in out.answer.text and "Nope." not in out.answer.text
+    assert "heavy-rain" in out.answer.text
+
+
+def test_lowest_order_reaches_the_executor(ctx):
+    llm = FakeLLM([plan(tool="rank_hubs", order="lowest"), ANSWER])
+    out = Agent(llm, ctx).run("s1", "Which hub is safest?")
+    assert out.result.order == "lowest" and out.result.rows[0].hub_id == "c"
