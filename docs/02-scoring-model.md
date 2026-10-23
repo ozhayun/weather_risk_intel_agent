@@ -123,7 +123,7 @@ Q3 answers are computed directly from `daily_weather`. The LLM only *picks* a me
 - **Every result includes:** the condition, `days_total`, `days_with_data`, and the source.
 - **Probe example:** Denver 2025, `snow_day`, `pct_of_days` → **10.1%**.
 
-## 7. Score snapshots and alerts (bonus)
+## 7. Score snapshots and alerts (bonus, deferred)
 
 - Each scoring run writes one `score_snapshots` row per hub: `run_at`, window, `scoring_version`, `R`, every `H_h`, `OBS_h`, `NRI_h`.
 - An alert fires when the **label changes** or `|ΔR| ≥ 5` compared with the previous snapshot of the same hub.

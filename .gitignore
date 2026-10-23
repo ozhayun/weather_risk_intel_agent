@@ -16,7 +16,7 @@ build/
 
 # Local data (the committed demo DB is whitelisted explicitly)
 data/*.db
-!data/demo.db
+!data/weather.db
 *.db-journal
 
 # Streamlit
