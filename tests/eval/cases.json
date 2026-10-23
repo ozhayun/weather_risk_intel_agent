@@ -322,5 +322,25 @@
     2024
    ]
   }
+ },
+ {
+  "id": "flood_days",
+  "turns": [
+   "How many flood days did Houston have in 2023?"
+  ],
+  "expect": {
+   "tool": "clarify",
+   "answer_contains": "FEMA NRI"
+  }
+ },
+ {
+  "id": "storm_days",
+  "turns": [
+   "How many severe storm days did Dallas have in 2024?"
+  ],
+  "expect": {
+   "tool": "clarify",
+   "answer_contains": "FEMA NRI"
+  }
  }
 ]
