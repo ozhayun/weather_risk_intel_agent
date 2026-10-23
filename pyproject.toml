@@ -23,7 +23,10 @@ package = false
 
 [tool.pytest.ini_options]
 addopts = "-m 'not eval'"
-markers = ["eval: runs the real LLM (needs an API key)"]
+markers = [
+    "eval: runs the real LLM (needs an API key)",
+    "security: prompt-injection tests against the real LLM (also marked eval)",
+]
 testpaths = ["tests"]
 
 [tool.ruff]
