@@ -7,6 +7,22 @@ from pathlib import Path
 from typing import Literal
 
 Region = Literal["midwest", "south", "west", "northeast"]
+STATE_NAMES = {
+    "IL": "Illinois",
+    "IN": "Indiana",
+    "MI": "Michigan",
+    "MN": "Minnesota",
+    "MO": "Missouri",
+    "KS": "Kansas",
+    "FL": "Florida",
+    "TX": "Texas",
+    "GA": "Georgia",
+    "TN": "Tennessee",
+    "CO": "Colorado",
+    "AZ": "Arizona",
+    "WA": "Washington",
+    "NJ": "New Jersey",
+}
 
 
 @dataclass(frozen=True)
@@ -47,7 +63,8 @@ class HubRegistry:
         for hub in hubs:
             for key in {hub.hub_id, hub.name, hub.city, *hub.aliases}:
                 self._index[normalize(key)] = hub
-                self._index[normalize(f"{key} {hub.state}")] = hub  # "Name, ST" as listed
+                for state in (hub.state, STATE_NAMES.get(hub.state, hub.state)):
+                    self._index[normalize(f"{key} {state}")] = hub  # "Name, ST" / "Name, State"
 
     @classmethod
     def from_json(cls, path: Path) -> "HubRegistry":

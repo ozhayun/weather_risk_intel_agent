@@ -106,3 +106,16 @@ def test_no_context_skips_grounding():
 def test_followups_capped_at_three():
     with pytest.raises(ValidationError):
         Answer(text="x", suggested_followups=["a", "b", "c", "d"])
+
+
+def test_grounding_checks_caveats_too():
+    with pytest.raises(ValidationError, match="97.3"):
+        Answer.model_validate(
+            {"text": "Fine.", "caveats": ["Dallas scored 97.3 points"]},
+            context={"result": stat_result()},
+        )
+
+
+@pytest.mark.parametrize("value,text", [(96.35, "96.4"), (53.65, "53.7"), (10.15, "10.2")])
+def test_grounding_accepts_half_up_rounding_boundary(value, text):
+    grounded(f"The value is {text}%.", stat_result(value=value))

@@ -47,3 +47,18 @@ def test_all_and_get():
     assert len(REG.all()) == 15
     assert REG.get("miami").state == "FL"
     assert REG.get("tokyo") is None
+
+
+@pytest.mark.parametrize(
+    "mention,hub_id",
+    [
+        ("Houston, Texas", "houston"),
+        ("Kansas City, MO", "kansas_city"),
+        ("Kansas City, Missouri", "kansas_city"),
+        ("Minneapolis-St. Paul", "minneapolis"),
+        ("Seattle, Washington", "seattle"),
+    ],
+)
+def test_resolve_full_state_names_and_metro_names(mention, hub_id):
+    hub = REG.resolve(mention)
+    assert hub is not None and hub.hub_id == hub_id

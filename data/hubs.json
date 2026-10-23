@@ -47,7 +47,9 @@
     "county_fips": "27053",
     "source_id": "FedEx Ground MPMN 5552",
     "aliases": [
-      "twin cities"
+      "twin cities",
+      "minneapolis-st paul",
+      "minneapolis st paul"
     ]
   },
   {
@@ -73,7 +75,9 @@
     "county_fips": "20209",
     "source_id": "FedEx Ground KCKS 5648",
     "aliases": [
-      "kc"
+      "kc",
+      "kansas city mo",
+      "kansas city missouri"
     ]
   },
   {
