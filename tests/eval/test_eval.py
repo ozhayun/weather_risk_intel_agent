@@ -51,7 +51,9 @@ def check_plan(action, exp: dict, ctx) -> None:
 def check_result(out, exp: dict, ctx) -> None:
     result = out.result
     if exp.get("scope_or_clarify"):
-        assert out.plan.action.tool == "clarify" or result.kind == "scope"
+        assert out.plan.action.tool == "clarify" or result.kind == "scope", (
+            f"plan={out.plan.model_dump_json()} result={result and result.kind}"
+        )
         return
     if "top_hub" in exp:
         assert result.rows[0].hub_id == exp["top_hub"]
