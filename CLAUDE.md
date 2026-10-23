@@ -53,8 +53,9 @@ Read `docs/01-requirements.md` (scope, query types, AI boundary) and `docs/02-sc
 
 ```bash
 uv sync                                    # install
-uv run python scripts/build_nri_subset.py  # rebuild data/nri_hubs.csv (rarely)
-uv run python scripts/ingest.py            # fetch Open-Meteo → SQLite, compute scores
+uv run python -m scripts.build_nri_subset  # rebuild data/nri_hubs.csv (rarely)
+uv run python -m scripts.ingest             # fetch Open-Meteo → SQLite (scores are computed at API startup)
+uv run python -m scripts.score_report       # print the scorebook
 uv run uvicorn app.api.main:app --reload   # API on :8000 (docs at /docs)
 uv run streamlit run ui/app.py             # chat UI
 uv run pytest                              # unit tests
