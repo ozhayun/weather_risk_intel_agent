@@ -4,7 +4,7 @@ An AI agent that helps logistics analysts decide which distribution hubs to prio
 
 - **Deterministic scoring.** The LLM never produces a number or a ranking. It turns the question into a JSON-schema-validated `QueryPlan`; code computes the result; the LLM explains it, and a validator rejects numbers in the answer and caveats that don't match the result (a soft check: integers within ±0.5 and small counts 0–20 pass).
 - **Chat UI** (Streamlit) → **API** (FastAPI) → **agent pipeline** → **SQLite** static dataset.
-- **Eval set:** 18 cases, plus 12 prompt-injection and follow-up tests. **30/30 on `gpt-4o-mini` across 3 runs.**
+- **Eval set:** 22 cases, plus 12 prompt-injection and follow-up tests. **34/34 on `gpt-4o-mini` across 2 runs.**
 
 ## Quickstart
 
@@ -25,6 +25,7 @@ The dataset is committed (`data/weather.db`, `data/nri_hubs.csv`), so nothing is
 ### Try asking
 
 - Which hubs in the Midwest are most exposed to winter disruption? → then *"And for flood?"*
+- Which hub has the lowest overall risk? / What are the safest Midwest hubs for winter?
 - Compare Miami and Houston in terms of hurricane and flood exposure.
 - What percentage of days in Denver last year had snowfall?
 - Why is the Dallas hub's weather disruption risk high? → then *"What about Chicago?"*
@@ -72,8 +73,8 @@ Streamlit ──HTTP──▶ FastAPI /chat ──▶ interpret (LLM → QueryPl
 ## Tests and evaluation
 
 ```bash
-uv run pytest              # 181 unit, pipeline, API, UI and security tests; no network, no LLM
-uv run pytest -m eval -v   # 30 real-LLM tests: 18 eval cases + 12 security/follow-up (needs a key)
+uv run pytest              # 205 unit, pipeline, API, UI and security tests; no network, no LLM
+uv run pytest -m eval -v   # 34 real-LLM tests: 22 eval cases + 12 security/follow-up (needs a key)
 uv run pytest -m security  # just the prompt-injection and follow-up tests
 ```
 
