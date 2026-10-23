@@ -74,13 +74,13 @@ class ScoringConfig(BaseModel):
 class HazardScore(BaseModel):
     hazard: Hazard
     score: float
-    obs: float | None
-    nri: float
+    observed_score: float | None  # 0–100 index from 2021–2025 data (None: NRI only)
+    nri_score: float  # 0–100, aggregated FEMA NRI national percentiles
     weight: float
     alpha: float
     contribution: float
-    obs_metrics: dict[str, float]  # metric name → days per year
-    nri_pctls: dict[str, float]  # NRI code → national percentile
+    observed_days_per_year: dict[str, float]  # metric name → average days per year
+    nri_percentiles: dict[str, float]  # NRI hazard code → national percentile
     flags: list[str]
 
 
@@ -91,7 +91,7 @@ class HubScore(BaseModel):
     composite: float
     label: Label
     peak_hazard: Hazard
-    rank: int
+    overall_rank: int  # 1 = highest composite among all hubs
     hazards: dict[Hazard, HazardScore]
     flags: list[str]
 
@@ -149,13 +149,13 @@ def score_hazard(
     return HazardScore(
         hazard=hazard,
         score=score,
-        obs=obs,
-        nri=nri,
+        observed_score=obs,
+        nri_score=nri,
         weight=cfg.weight,
         alpha=cfg.alpha,
         contribution=cfg.weight * score,
-        obs_metrics=rates,
-        nri_pctls={code: pctls.get(code, 0.0) for code in cfg.nri},
+        observed_days_per_year=rates,
+        nri_percentiles={code: pctls.get(code, 0.0) for code in cfg.nri},
         flags=flags,
     )
 
@@ -175,7 +175,7 @@ def _score_hub(hub: Hub, days: list[DailyWeather], pctls: dict, cfg: ScoringConf
         composite=composite,
         label=label_for(composite, cfg.labels),
         peak_hazard=max(hazards.values(), key=lambda h: h.score).hazard,
-        rank=0,
+        overall_rank=0,
         hazards=hazards,
         flags=flags,
     )
@@ -192,5 +192,5 @@ def build_scorebook(
     }
     book = ScoreBook(version=cfg.version, hubs=scores)
     for position, hub_score in enumerate(book.ranked(), start=1):
-        hub_score.rank = position
+        hub_score.overall_rank = position
     return book

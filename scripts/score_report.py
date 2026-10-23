@@ -16,13 +16,13 @@ def main() -> None:
     print(f"{'#':>2} {'hub':<13}{'R':>6} {'label':<7}" + "".join(f"{n[:8]:>9}" for n in names))
     for h in book.ranked():
         cells = "".join(f"{h.hazards[n].score:9.1f}" for n in names)
-        print(f"{h.rank:>2} {h.hub_id:<13}{h.composite:6.1f} {h.label:<7}{cells}")
+        print(f"{h.overall_rank:>2} {h.hub_id:<13}{h.composite:6.1f} {h.label:<7}{cells}")
     print("\nobserved rates (days/yr) and OBS vs NRI:")
     for h in book.ranked():
         parts = [
-            f"{n}: obs={hs.obs:.0f} nri={hs.nri:.0f} {hs.obs_metrics}"
+            f"{n}: obs={hs.observed_score:.0f} nri={hs.nri_score:.0f} {hs.observed_days_per_year}"
             for n, hs in h.hazards.items()
-            if hs.obs is not None
+            if hs.observed_score is not None
         ]
         print(f"{h.hub_id:<13} flags={h.flags}\n    " + "\n    ".join(parts))
 

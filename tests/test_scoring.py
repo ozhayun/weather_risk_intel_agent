@@ -51,30 +51,30 @@ def score(cfg, days, pctls, years=1.0, expected=10):
 
 def test_metric_score_caps_at_100():
     h = score(snow_cfg(cap=3.0), days_with_snow(6), {"WNTW": 0.0})
-    assert h.obs == 100.0
-    assert h.obs_metrics == {"snow_days": 6.0}
+    assert h.observed_score == 100.0
+    assert h.observed_days_per_year == {"snow_days": 6.0}
 
 
 def test_hazard_blend():
     h = score(snow_cfg(alpha=0.6, cap=10.0), days_with_snow(5), {"WNTW": 80.0})
-    assert h.obs == 50.0
+    assert h.observed_score == 50.0
     assert h.score == pytest.approx(0.6 * 50 + 0.4 * 80)
     assert h.contribution == pytest.approx(0.5 * h.score)
 
 
 def test_flood_uses_max_nri():
     cfg = snow_cfg(nri=("IFLD", "CFLD"), agg="max")
-    assert score(cfg, days_with_snow(0), {"IFLD": 98.0, "CFLD": 0.0}).nri == 98.0
+    assert score(cfg, days_with_snow(0), {"IFLD": 98.0, "CFLD": 0.0}).nri_score == 98.0
 
 
 def test_mean_nri_treats_missing_code_as_zero():
     cfg = snow_cfg(nri=("WNTW", "ISTM"))
-    assert score(cfg, days_with_snow(0), {"WNTW": 60.0}).nri == 30.0
+    assert score(cfg, days_with_snow(0), {"WNTW": 60.0}).nri_score == 30.0
 
 
 def test_alpha_zero_single_source():
     h = score(snow_cfg(alpha=0.0, nri=("HRCN",)), days_with_snow(10), {"HRCN": 91.0})
-    assert h.obs is None
+    assert h.observed_score is None
     assert h.score == 91.0
     assert "single_source" in h.flags
 
@@ -143,7 +143,7 @@ def test_contributions_sum_to_composite():
     h = book.hubs["a"]
     assert sum(x.contribution for x in h.hazards.values()) == pytest.approx(h.composite)
     assert h.peak_hazard == "hurricane"
-    assert h.rank == 1
+    assert h.overall_rank == 1
     assert "county_level" in h.flags and "single_source" in h.flags
 
 
@@ -168,7 +168,7 @@ def test_ranked_tie_breaks_by_hub_id():
         make_config(),
     )
     assert [h.hub_id for h in book.ranked()] == ["c", "a", "b"]
-    assert [h.rank for h in book.ranked()] == [1, 2, 3]
+    assert [h.overall_rank for h in book.ranked()] == [1, 2, 3]
     assert [h.hub_id for h in book.ranked("winter", hub_ids=["a", "b"])] == ["a", "b"]
 
 

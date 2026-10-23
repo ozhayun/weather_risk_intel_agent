@@ -1,0 +1,118 @@
+import pytest
+
+from app.domain.queries import compare_hubs, explain_hub, get_weather_stat, rank_hubs
+
+
+def test_rank_region_filters_and_sorts(ctx):
+    r = rank_hubs(ctx, hazard="winter", region="midwest")
+    assert r.kind == "rank"
+    assert [row.hub_id for row in r.rows] == ["a", "b"]
+    assert r.rows[0].score >= r.rows[1].score
+    assert r.rows[0].hazard_detail.observed_days_per_year["snow_days"] > 0
+
+
+def test_rank_overall_uses_composite_and_drivers(ctx):
+    r = rank_hubs(ctx)
+    assert [row.rank for row in r.rows] == [1, 2, 3]
+    assert r.rows[0].score == pytest.approx(ctx.book.hubs["a"].composite)
+    assert len(r.rows[0].top_drivers) == 2
+    assert r.rows[0].hazard_detail is None
+
+
+def test_rank_top_n(ctx):
+    assert len(rank_hubs(ctx, top_n=1).rows) == 1
+    assert len(rank_hubs(ctx, top_n=50).rows) == 3
+
+
+def test_rank_named_hubs_with_unknown_is_scope(ctx):
+    r = rank_hubs(ctx, hubs=["Alpha", "Atlantis"])
+    assert r.kind == "scope" and r.unknown == ["Atlantis"]
+
+
+def test_rank_named_hubs_subset(ctx):
+    assert [row.hub_id for row in rank_hubs(ctx, hubs=["gamma", "beta"]).rows] == ["b", "c"]
+
+
+def test_rank_caveats_always_mention_window(ctx):
+    assert any("2025" in c for c in rank_hubs(ctx).caveats)
+
+
+def test_rank_by_hazard_only_reports_that_hazards_flags(ctx):
+    caveats = " ".join(rank_hubs(ctx, hazard="winter").caveats)
+    assert "NRI only" not in caveats  # single_source belongs to hurricane
+
+
+def test_compare_two_hubs_leaders_and_gaps(ctx):
+    r = compare_hubs(ctx, ["Alpha", "Beta"], ["winter", "hurricane"])
+    assert r.kind == "compare"
+    assert r.leaders["winter"] == "a" and r.leaders["overall"] == "a"
+    a, b = ctx.book.hubs["a"], ctx.book.hubs["b"]
+    assert r.gaps["hurricane"] == pytest.approx(
+        abs(a.hazards["hurricane"].score - b.hazards["hurricane"].score)
+    )
+
+
+def test_compare_defaults_to_all_hazards(ctx):
+    assert compare_hubs(ctx, ["a", "b"]).hazards == ["winter", "hurricane"]
+
+
+def test_compare_with_unknown_hub_is_scope(ctx):
+    r = compare_hubs(ctx, ["Alpha", "Tokyo"])
+    assert r.kind == "scope" and r.reason == "unknown_hub"
+    assert r.unknown == ["Tokyo"]
+    assert "Tokyo" in r.message and "Alpha" in r.message
+
+
+def test_compare_single_hub_is_scope(ctx):
+    assert compare_hubs(ctx, ["Alpha"]).reason == "too_few_hubs"
+
+
+def test_compare_duplicate_hub_is_scope(ctx):
+    assert compare_hubs(ctx, ["Alpha", "alpha town"]).reason == "too_few_hubs"
+
+
+def test_stat_pct_of_days(ctx):
+    r = get_weather_stat(ctx, "Alpha", "snow_day", "pct_of_days", 2025)
+    assert r.kind == "stat"
+    assert r.value == 20.0 and r.matched_days == 2
+    assert r.days_in_period == 10 and r.days_with_data == 10
+    assert r.condition == "snowfall_cm >= 0.1"
+
+
+def test_stat_count_and_per_year(ctx):
+    assert get_weather_stat(ctx, "a", "snow_day", "count", "full_window").value == 2
+    assert get_weather_stat(ctx, "a", "snow_day", "per_year_avg", 2025).value == 2
+
+
+def test_stat_last_year_maps_to_window_end_year(ctx):
+    r = get_weather_stat(ctx, "a", "snow_day", "count", "last_year")
+    assert r.period_label == "2025"
+
+
+@pytest.mark.parametrize("year", [2019, 2024, 2026])
+def test_stat_year_out_of_range(ctx, year):
+    r = get_weather_stat(ctx, "a", "snow_day", "count", year)
+    assert r.kind == "scope" and r.reason == "period_out_of_range"
+
+
+def test_stat_unknown_hub(ctx):
+    assert get_weather_stat(ctx, "Boston", "snow_day", "count", 2025).reason == "unknown_hub"
+
+
+def test_explain_premise_check(ctx):
+    r = explain_hub(ctx, "Beta", asserted_level="high")
+    assert r.kind == "explain"
+    assert r.premise_check.holds is False and r.premise_check.actual == "medium"
+    assert r.total_hubs == 3
+
+
+def test_explain_premise_holds(ctx):
+    assert explain_hub(ctx, "Alpha", asserted_level="high").premise_check.holds is True
+
+
+def test_explain_without_premise(ctx):
+    assert explain_hub(ctx, "c").premise_check is None
+
+
+def test_explain_unknown_hub(ctx):
+    assert explain_hub(ctx, "Springfield").kind == "scope"
