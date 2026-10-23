@@ -2,9 +2,9 @@
 
 An AI agent that helps logistics analysts decide which distribution hubs to prioritize for weather-resilience investment. It ranks, compares and explains weather-disruption exposure for **15 real US hubs**, using 5 years of daily weather (Open-Meteo, 2021–2025) and FEMA's National Risk Index.
 
-- **Deterministic scoring.** The LLM never produces a number or a ranking. It turns the question into a JSON-schema-validated `QueryPlan`; code computes the result; the LLM explains it, and a validator rejects any number not in the result.
+- **Deterministic scoring.** The LLM never produces a number or a ranking. It turns the question into a JSON-schema-validated `QueryPlan`; code computes the result; the LLM explains it, and a validator rejects numbers in the answer and caveats that don't match the result (a soft check: integers within ±0.5 and small counts 0–20 pass).
 - **Chat UI** (Streamlit) → **API** (FastAPI) → **agent pipeline** → **SQLite** static dataset.
-- **Eval set:** 15 cases, **15/15 on `gpt-4o-mini` across 3 runs**.
+- **Eval set:** 18 cases, **18/18 on `gpt-4o-mini` across 3 runs**.
 
 ## Quickstart
 
@@ -72,15 +72,15 @@ Streamlit ──HTTP──▶ FastAPI /chat ──▶ interpret (LLM → QueryPl
 ## Tests and evaluation
 
 ```bash
-uv run pytest            # 137 unit, pipeline, API and UI tests; no network, no LLM
-uv run pytest -m eval -v # 15 end-to-end cases with the real LLM (needs a key)
+uv run pytest            # 152 unit, pipeline, API and UI tests; no network, no LLM
+uv run pytest -m eval -v # 18 end-to-end cases with the real LLM (needs a key)
 ```
 
 The eval set (`tests/eval/cases.json`) covers:
 - the 4 assignment questions
 - follow-ups
 - aliases ("KC", "St Louis")
-- a non-hub city, mixed valid and invalid hubs, a year outside 2021–2025
+- a non-hub city, mixed valid and invalid hubs, a year outside 2021–2025, "this year", a ranking restricted to one year
 - a forecast request, an ROI question, a false premise
 
 Each case checks:
@@ -88,7 +88,7 @@ Each case checks:
 - the deterministic outcome (expected top hub, premise check)
 - that every number in the answer comes from the result
 
-Latest result: **15/15, stable over 3 runs** on `openai/gpt-4o-mini`. The eval caught one real bug, now fixed: a hub mention written as "Chicago (Wheeling), IL" wasn't recognised.
+Latest result: **18/18, stable over 3 runs** on `openai/gpt-4o-mini`. The eval caught real bugs, now fixed: a hub mention written as "Chicago (Wheeling), IL" wasn't recognised, and a literal example year in the prompt anchored "this year" to 2023.
 
 ## Assumptions, uncertainty and scope
 
@@ -99,7 +99,7 @@ Latest result: **15/15, stable over 3 runs** on `openai/gpt-4o-mini`. The eval c
 - **Open-Meteo is reanalysis data** (~10 km grid). Snowfall and wind gusts are modeled, not measured at stations.
 - **NRI is county-level.** Large counties blur conditions at the site; for example, King County includes the Cascades. When the two sources differ by 50 or more points, the hazard is flagged `sources_disagree`.
 - **Heat:** NRI defines heat waves *relative to local climate*, while the observed metric counts absolute ≥ 35 °C days. That's why heat disagreements are common.
-- **Out of scope:** forecasts, ROI, non-hub locations, years outside 2021–2025. The agent says so instead of guessing.
+- **Out of scope:** forecasts, ROI, non-hub locations, years outside 2021–2025, and rankings for a single year (scores cover the whole window; per-year stats work for one hub). The agent says so instead of guessing.
 - **Deferred:** score-change alerts (bonus), deployment, voice input.
 
 ## Documentation
