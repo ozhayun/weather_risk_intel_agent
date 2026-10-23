@@ -151,3 +151,22 @@ def test_period_scope_message_offers_the_window_not_the_hub_list(ctx):
 
 def test_unknown_hub_scope_message_still_lists_hubs(ctx):
     assert "Gamma" in get_weather_stat(ctx, "Boston", "snow_day", "count", 2025).message
+
+
+def test_hazard_premise_is_judged_by_that_hazards_rank(ctx):
+    # Gamma: lowest winter score of 3 hubs → rank 3/3 → "low" for winter
+    r = explain_hub(ctx, "Gamma", asserted_level="high", hazard="winter")
+    assert r.premise_check.hazard == "winter"
+    assert r.premise_check.holds is False and r.premise_check.actual == "low"
+    assert (r.premise_check.rank, r.premise_check.total) == (3, 3)
+    assert r.focus_hazard == "winter"
+
+
+def test_hazard_premise_holds_for_top_ranked_hub(ctx):
+    check = explain_hub(ctx, "Alpha", asserted_level="high", hazard="winter").premise_check
+    assert check.holds is True and check.rank == 1
+
+
+def test_overall_premise_still_uses_composite_label(ctx):
+    check = explain_hub(ctx, "Beta", asserted_level="high").premise_check
+    assert check.hazard is None and check.actual == "medium" and check.rank == 2

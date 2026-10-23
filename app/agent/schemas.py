@@ -51,6 +51,9 @@ class ExplainQuery(BaseModel):
 
     tool: Literal["explain_hub"]
     hub: str
+    hazard: Hazard | None = Field(
+        default=None, description="Set when the question is about one hazard of this hub"
+    )
     asserted_level: Label | None = Field(
         default=None, description="Risk level the user's question assumes, e.g. 'why is X high'"
     )
@@ -69,6 +72,14 @@ Action = RankQuery | CompareQuery | StatQuery | ExplainQuery | Clarify
 
 class QueryPlan(BaseModel):
     action: Annotated[Action, Field(discriminator="tool")]
+
+    @model_validator(mode="before")
+    @classmethod
+    def _wrap_bare_action(cls, data):
+        """The model sometimes returns the tool call without the `action` wrapper."""
+        if isinstance(data, dict) and "tool" in data and "action" not in data:
+            return {"action": data}
+        return data
 
 
 _NUMBER = re.compile(r"(?<![\w.])-?\d[\d,]*(?:\.\d+)?")
@@ -110,4 +121,6 @@ class Answer(BaseModel):
 @dataclass
 class Turn:
     message: str
-    plan_json: str | None
+    plan_json: str | None  # None for clarify turns (their reason/JSON made the model repeat them)
+    reply: str = ""  # what the user saw, so "yes" / "why?" have context
+    summary: str = ""  # deterministic gist of the result (e.g. top hubs)

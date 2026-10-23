@@ -126,3 +126,20 @@ def test_rank_query_order_defaults_to_highest_and_accepts_lowest():
     assert plan({"tool": "rank_hubs", "order": "lowest"}).action.order == "lowest"
     with pytest.raises(ValidationError):
         plan({"tool": "rank_hubs", "order": "random"})
+
+
+def test_explain_query_accepts_a_hazard():
+    a = plan({"tool": "explain_hub", "hub": "Miami", "hazard": "winter", "asserted_level": "high"})
+    assert a.action.hazard == "winter"
+    assert plan({"tool": "explain_hub", "hub": "Miami"}).action.hazard is None
+
+
+def test_plan_accepts_a_tool_call_missing_its_action_wrapper():
+    # gpt-4o-mini sometimes drops the wrapper; repairing it is lossless.
+    flat = {"tool": "clarify", "question": "No ROI data.", "reason": "out_of_scope"}
+    assert QueryPlan.model_validate(flat).action.tool == "clarify"
+
+
+def test_plan_without_tool_or_action_is_still_rejected():
+    with pytest.raises(ValidationError):
+        QueryPlan.model_validate({"question": "?"})
