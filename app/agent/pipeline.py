@@ -3,6 +3,7 @@
 import logging
 from dataclasses import dataclass
 
+from app.agent.guards import REFUSAL, filter_followups, leaks_instructions
 from app.agent.llm import StructuredLLM
 from app.agent.prompts import interpret_messages, narrate_messages
 from app.agent.schemas import (
@@ -68,7 +69,9 @@ class Agent:
             log.exception("interpret failed")
             return ChatOutcome(Answer(text=INTERPRET_FAILED), None, None)
         if isinstance(plan.action, Clarify):
-            return ChatOutcome(Answer(text=plan.action.question), plan, None)
+            question = plan.action.question
+            text = REFUSAL if leaks_instructions(question) else question
+            return ChatOutcome(Answer(text=text), plan, None)
         try:
             result = self.execute(plan)
         except Exception:
@@ -77,13 +80,22 @@ class Agent:
         if result.kind == "scope":
             return ChatOutcome(Answer(text=result.message), plan, result)
         try:
-            answer = self.llm.complete(
-                Answer, narrate_messages(message, result), context={"result": result}
-            )
+            messages = narrate_messages(message, result, hubs, self.ctx.window_label)
+            answer = self._safe(self.llm.complete(Answer, messages, context={"result": result}))
         except Exception:
             log.exception("narrate failed")
             answer = Answer(text=NARRATE_FAILED, caveats=result.caveats[:3])
         return ChatOutcome(answer, plan, result)
+
+    def _safe(self, answer: Answer) -> Answer:
+        """Drop prompt echoes and follow-ups the tools can't answer."""
+        written = " ".join([answer.text, *answer.caveats, *answer.suggested_followups])
+        if leaks_instructions(written):
+            log.warning("narration echoed the instructions; replaced with refusal")
+            return Answer(text=REFUSAL)
+        first, last = (int(d[:4]) for d in (self.ctx.cfg.window_start, self.ctx.cfg.window_end))
+        followups = filter_followups(answer.suggested_followups, first, last)
+        return answer.model_copy(update={"suggested_followups": followups})
 
     def execute(self, plan: QueryPlan) -> Result:
         match plan.action:

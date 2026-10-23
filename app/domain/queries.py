@@ -1,5 +1,6 @@
 """Tool executors: validated arguments in, typed Result out. Pure over an in-memory context."""
 
+import re
 from dataclasses import dataclass
 from typing import Literal
 
@@ -54,9 +55,15 @@ def _scope(ctx: QueryContext, reason, message: str, unknown: list[str] | None = 
     )
 
 
+def _echo_safe(mention: str, limit: int = 40) -> str:
+    """User text is echoed back in scope messages: strip markup and cap its length."""
+    plain = re.sub(r"[<>\[\]()`*_#|\\]", "", mention).strip()
+    return plain if len(plain) <= limit else f"{plain[:limit].rstrip()}…"
+
+
 def _resolve(ctx: QueryContext, mentions: list[str]) -> tuple[list[Hub], ScopeResult | None]:
     resolved = [(m, ctx.registry.resolve(m)) for m in mentions]
-    unknown = [m for m, hub in resolved if hub is None]
+    unknown = [_echo_safe(m) for m, hub in resolved if hub is None]
     if unknown:
         msg = f"I only know our hub locations, and {', '.join(unknown)} is not one of them."
         return [], _scope(ctx, "unknown_hub", msg, unknown)
