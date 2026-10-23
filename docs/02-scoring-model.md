@@ -1,6 +1,6 @@
 # 02 — Deterministic Scoring Model
 
-_status: agreed design, thresholds provisional until first full ingest · 2026-10-23_
+_status: calibrated on the real dataset, frozen at scoring v1.1 · 2026-10-23_
 
 All scoring is pure Python over stored data. Given the same inputs (SQLite data plus `config/scoring.toml`), the output is always the same. The LLM never computes or changes a score.
 
@@ -88,7 +88,31 @@ How these were chosen:
 | medium | `35 ≤ R < 55` |
 | high | `R ≥ 55` |
 
-These bands are provisional. A hand-worked estimate from the probe data gives Dallas ≈ 61 (high), Houston ≈ 62 (high), Miami ≈ 56 (high), Minneapolis ≈ 43 (medium) and Seattle ≈ 23 (low). We'll re-check after the real ingest.
+The bands were kept after calibration on the real dataset (scoring v1.1, output of `python -m scripts.score_report`):
+
+| # | Hub | R | Label | Winter | Hurricane | Flood | Heat | Severe |
+|---|---|---|---|---|---|---|---|---|
+| 1 | Houston | 64.0 | high | 14.2 | 90.5 | 95.8 | 57.7 | 44.0 |
+| 2 | Dallas | 62.6 | high | 21.3 | 49.4 | 93.1 | 68.2 | 79.8 |
+| 3 | Newark | 59.6 | high | 30.3 | 83.3 | 81.4 | 33.2 | 45.0 |
+| 4 | Memphis | 56.7 | high | 24.8 | 62.4 | 85.7 | 49.4 | 48.9 |
+| 5 | Miami | 55.7 | high | 6.3 | 98.9 | 78.9 | 26.7 | 36.7 |
+| 6 | Chicago | 54.4 | medium | 54.1 | 39.3 | 69.6 | 15.1 | 74.3 |
+| 7 | Atlanta | 53.5 | medium | 18.7 | 69.5 | 78.7 | 13.7 | 56.5 |
+| 8 | Detroit | 51.9 | medium | 49.0 | 47.6 | 63.1 | 19.9 | 62.2 |
+| 9 | St. Louis | 49.1 | medium | 35.2 | 49.2 | 57.8 | 42.2 | 55.3 |
+| 10 | Indianapolis | 46.9 | medium | 37.3 | 36.0 | 67.6 | 20.0 | 58.0 |
+| 11 | Phoenix | 44.8 | medium | 1.0 | 49.5 | 65.2 | 99.0 | 30.0 |
+| 12 | Minneapolis | 43.7 | medium | 75.0 | 0.0 | 54.1 | 27.9 | 61.8 |
+| 13 | Kansas City | 41.6 | medium | 39.7 | 0.0 | 62.4 | 42.1 | 69.5 |
+| 14 | Seattle | 29.8 | low | 30.9 | 0.0 | 63.6 | 17.6 | 29.6 |
+| 15 | Denver | 26.0 | low | 47.1 | 0.0 | 26.8 | 11.2 | 43.8 |
+
+Calibration results:
+- **Caps unchanged.** Only Phoenix heat saturates at 100.
+- **Labels unchanged.** All three bands are used, and Seattle is low.
+- **`disagree_threshold` raised from 40 to 50.** At 40 the flag fired on 29 of 75 hub-hazard pairs, at least one for every hub but Denver, so it said nothing. At 50 it fires on 15.
+- **Heat disagreements are structural.** NRI defines a heat wave *relative to local climate*, while `OBS` counts absolute ≥ 35 °C days. Memphis, for example, has NRI heat at the 99th percentile but only 12 hot days per year.
 
 Ranking for Q1 sorts by `H_h` for the requested hazard, or by `R` for overall. Ties are broken by `hub_id`.
 Values are stored at full precision and rounded to 1 decimal only for display.
@@ -98,7 +122,7 @@ Values are stored at full precision and rounded to 1 decimal only for display.
 | Flag | Rule |
 |---|---|
 | `low_coverage` | Fewer than 98% of days in the window have a non-null value for the metric's variable |
-| `sources_disagree` | `α_h > 0` and `|OBS_h − NRI_h| ≥ 40`. Example: Seattle winter, where King County includes the Cascades (NRI winter 96th percentile vs. little snow in the city) |
+| `sources_disagree` | `α_h > 0` and `|OBS_h − NRI_h| ≥ 50`. Example: Seattle winter, where King County includes the Cascades (NRI winter 96th percentile vs. little snow in the city) |
 | `single_source` | `α_h = 0` (hurricane) |
 | `county_level` | Always attached to NRI: the score describes the whole county, not the facility |
 

@@ -69,7 +69,7 @@ def load_nri_csv(path: Path) -> list[dict]:
 
 def main() -> None:
     settings, cfg = get_settings(), load_scoring_config()
-    start, end = cfg["window_start"], cfg["window_end"]
+    start, end = cfg.window_start, cfg.window_end
     conn = connect(settings.db_path)
     with httpx.Client() as client:
         for hub in HubRegistry.from_json(settings.hubs_path).all():
