@@ -85,3 +85,23 @@ def test_chat_503_when_llm_unavailable():
 @pytest.mark.parametrize("top_n", [0, -1])
 def test_rankings_rejects_non_positive_top_n(client, top_n):
     assert client.get("/rankings", params={"top_n": top_n}).status_code == 422
+
+
+def test_load_context_fails_loudly_on_missing_db(tmp_path, monkeypatch):
+    from app.api.main import load_context
+    from app.config import Settings
+
+    settings = Settings(_env_file=None, db_path=tmp_path / "missing.db")
+    with pytest.raises(FileNotFoundError, match="scripts.ingest"):
+        load_context(settings)
+    assert not (tmp_path / "missing.db").exists()
+
+
+def test_load_context_fails_loudly_on_empty_db(tmp_path):
+    from app.api.main import load_context
+    from app.config import Settings
+    from app.data.db import connect
+
+    connect(tmp_path / "empty.db").close()
+    with pytest.raises(RuntimeError, match="no daily weather"):
+        load_context(Settings(_env_file=None, db_path=tmp_path / "empty.db"))

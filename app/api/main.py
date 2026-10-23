@@ -23,6 +23,10 @@ AgentFactory = Callable[[QueryContext], Agent]
 
 
 def load_context(settings: Settings) -> QueryContext:
+    if not settings.db_path.exists():  # connect() would silently create an empty DB
+        raise FileNotFoundError(
+            f"{settings.db_path} not found; build it with: uv run python -m scripts.ingest"
+        )
     cfg = load_scoring_config()
     registry = HubRegistry.from_json(settings.hubs_path)
     conn = connect(settings.db_path)
@@ -30,6 +34,8 @@ def load_context(settings: Settings) -> QueryContext:
         daily, nri = load_daily(conn), load_nri(conn)
     finally:
         conn.close()
+    if not daily:
+        raise RuntimeError(f"{settings.db_path} has no daily weather; run scripts.ingest")
     return QueryContext(registry, build_scorebook(registry.all(), daily, nri, cfg), daily, cfg)
 
 
