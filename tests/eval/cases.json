@@ -135,7 +135,15 @@
    "How many snow days did Denver have in 2019?"
   ],
   "expect": {
-   "scope_or_clarify": true
+   "tool": "get_weather_stat",
+   "hubs": [
+    "denver"
+   ],
+   "period": [
+    2019
+   ],
+   "result_kind": "scope",
+   "answer_contains": "2021\u20132025"
   }
  },
  {
@@ -261,6 +269,58 @@
    "region": "midwest",
    "order": "lowest",
    "top_hub": "st_louis"
+  }
+ },
+ {
+  "id": "snow_count_2018",
+  "turns": [
+   "What was Denver's snow days count in 2018?"
+  ],
+  "expect": {
+   "tool": "get_weather_stat",
+   "hubs": [
+    "denver"
+   ],
+   "metric": "snow_day",
+   "period": [
+    2018
+   ],
+   "result_kind": "scope",
+   "answer_contains": "2021\u20132025"
+  }
+ },
+ {
+  "id": "rain_days_specific_year",
+  "turns": [
+   "How many heavy rain days did Miami have in 2024?"
+  ],
+  "expect": {
+   "tool": "get_weather_stat",
+   "hubs": [
+    "miami"
+   ],
+   "metric": "heavy_rain_day",
+   "aggregation": "count",
+   "period": [
+    2024
+   ]
+  }
+ },
+ {
+  "id": "no_stuck_refusal",
+  "turns": [
+   "How many hurricane days did Miami have in 2024?",
+   "How many heavy rain days did Miami have in 2024?"
+  ],
+  "expect": {
+   "tool": "get_weather_stat",
+   "hubs": [
+    "miami"
+   ],
+   "metric": "heavy_rain_day",
+   "period": [
+    2024
+   ]
   }
  }
 ]
