@@ -101,3 +101,9 @@ def test_hazard_count_clarify_uses_deterministic_nri_explanation(ctx):
     out = Agent(llm, ctx).run("s1", "How many hurricane days did Alpha have in 2025?")
     assert "static FEMA NRI" in out.answer.text and "Nope." not in out.answer.text
     assert "heavy-rain" in out.answer.text
+
+
+def test_lowest_order_reaches_the_executor(ctx):
+    llm = FakeLLM([plan(tool="rank_hubs", order="lowest"), ANSWER])
+    out = Agent(llm, ctx).run("s1", "Which hub is safest?")
+    assert out.result.order == "lowest" and out.result.rows[0].hub_id == "c"

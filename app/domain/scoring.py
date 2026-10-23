@@ -101,14 +101,18 @@ class ScoreBook(BaseModel):
     hubs: dict[str, HubScore]
 
     def ranked(
-        self, hazard: Hazard | None = None, hub_ids: list[str] | None = None
+        self,
+        hazard: Hazard | None = None,
+        hub_ids: list[str] | None = None,
+        lowest_first: bool = False,
     ) -> list[HubScore]:
         pool = [h for h in self.hubs.values() if hub_ids is None or h.hub_id in hub_ids]
 
         def value(h: HubScore) -> float:
             return h.hazards[hazard].score if hazard else h.composite
 
-        return sorted(pool, key=lambda h: (-value(h), h.hub_id))
+        sign = 1 if lowest_first else -1  # ties always break by hub_id ascending
+        return sorted(pool, key=lambda h: (sign * value(h), h.hub_id))
 
 
 def label_for(score: float, labels: dict[str, float]) -> Label:

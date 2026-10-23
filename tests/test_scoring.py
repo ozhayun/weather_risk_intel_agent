@@ -176,3 +176,14 @@ def test_real_config_loads():
     cfg = load_scoring_config()
     assert cfg.hazards["flood"].nri_agg == "max"
     assert set(cfg.hazards) == {"winter", "hurricane", "flood", "heat", "severe_storms"}
+
+
+def test_ranked_lowest_first_ties_still_break_by_hub_id():
+    nri = {"WNTW": 50.0, "HRCN": 50.0}
+    book = build_scorebook(
+        [hub("b"), hub("a"), hub("c")],
+        {k: days_with_snow(0) for k in "abc"},
+        {"a": nri, "b": nri, "c": {"WNTW": 90.0, "HRCN": 90.0}},
+        make_config(),
+    )
+    assert [h.hub_id for h in book.ranked(lowest_first=True)] == ["a", "b", "c"]

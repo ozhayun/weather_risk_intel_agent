@@ -108,7 +108,7 @@ class Agent:
     def execute(self, plan: QueryPlan) -> Result:
         match plan.action:
             case RankQuery() as a:
-                return rank_hubs(self.ctx, a.hazard, a.region, a.hubs, a.top_n)
+                return rank_hubs(self.ctx, a.hazard, a.region, a.hubs, a.top_n, a.order)
             case CompareQuery() as a:
                 return compare_hubs(self.ctx, a.hubs, a.hazards)
             case StatQuery() as a:
