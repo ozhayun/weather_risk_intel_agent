@@ -237,5 +237,30 @@
     "dallas"
    ]
   }
+ },
+ {
+  "id": "lowest_overall",
+  "turns": [
+   "Which hub has the lowest overall weather risk?"
+  ],
+  "expect": {
+   "tool": "rank_hubs",
+   "hazard": "overall",
+   "order": "lowest",
+   "top_hub": "denver"
+  }
+ },
+ {
+  "id": "safest_midwest_winter",
+  "turns": [
+   "What are the safest Midwest hubs for winter?"
+  ],
+  "expect": {
+   "tool": "rank_hubs",
+   "hazard": "winter",
+   "region": "midwest",
+   "order": "lowest",
+   "top_hub": "st_louis"
+  }
  }
 ]

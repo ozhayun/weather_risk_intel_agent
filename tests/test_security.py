@@ -165,3 +165,7 @@ def test_narrate_rules_restrict_day_statistics():
 
 def test_interpret_rules_state_hurricane_is_static_nri():
     assert "static FEMA NRI" in INTERPRET_RULES
+
+
+def test_narrate_rules_define_percentile_direction():
+    assert "P% of US counties have a LOWER frequency" in NARRATE_RULES
