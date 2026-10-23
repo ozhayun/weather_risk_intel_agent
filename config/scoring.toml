@@ -1,0 +1,93 @@
+# Deterministic scoring model — see docs/02-scoring-model.md.
+# Any change to a value below must bump `version`.
+version = "1.0"
+window_start = "2021-01-01"
+window_end = "2025-12-31"
+
+[labels]          # composite R thresholds (R < medium → low)
+medium = 35.0
+high = 55.0
+
+[flags]
+disagree_threshold = 40.0   # |OBS − NRI| at or above this → sources_disagree
+min_coverage = 0.98         # share of non-null days below this → low_coverage
+
+[hazards.winter]
+weight = 0.20
+alpha = 0.6
+nri = ["WNTW", "ISTM", "CWAV"]
+nri_agg = "mean"
+
+[[hazards.winter.metrics]]
+name = "snow_days"
+field = "snowfall_cm"
+op = ">="
+threshold = 1.0
+cap = 30.0
+
+[[hazards.winter.metrics]]
+name = "extreme_cold_days"
+field = "tmin_c"
+op = "<="
+threshold = -18.0
+cap = 30.0
+
+[hazards.hurricane]
+weight = 0.25
+alpha = 0.0
+nri = ["HRCN"]
+nri_agg = "mean"
+metrics = []
+
+[hazards.flood]
+weight = 0.25
+alpha = 0.4
+nri = ["IFLD", "CFLD"]
+nri_agg = "max"
+
+[[hazards.flood.metrics]]
+name = "heavy_rain_days"
+field = "precip_mm"
+op = ">="
+threshold = 25.0
+cap = 15.0
+
+[[hazards.flood.metrics]]
+name = "very_heavy_rain_days"
+field = "precip_mm"
+op = ">="
+threshold = 50.0
+cap = 5.0
+
+[hazards.heat]
+weight = 0.10
+alpha = 0.6
+nri = ["HWAV"]
+nri_agg = "mean"
+
+[[hazards.heat.metrics]]
+name = "hot_days"
+field = "tmax_c"
+op = ">="
+threshold = 35.0
+cap = 120.0
+
+[[hazards.heat.metrics]]
+name = "dangerous_heat_days"
+field = "apparent_tmax_c"
+op = ">="
+threshold = 40.0
+cap = 60.0
+
+[hazards.severe_storms]
+weight = 0.20
+alpha = 0.3
+nri = ["TRND", "HAIL", "SWND"]
+nri_agg = "mean"
+
+[[hazards.severe_storms.metrics]]
+name = "high_wind_days"
+field = "gust_max_kmh"
+op = ">="
+threshold = 75.0
+cap = 5.0
