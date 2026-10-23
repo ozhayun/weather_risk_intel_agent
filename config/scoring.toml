@@ -1,6 +1,6 @@
 # Deterministic scoring model — see docs/02-scoring-model.md.
 # Any change to a value below must bump `version`.
-version = "1.0"
+version = "1.1"
 window_start = "2021-01-01"
 window_end = "2025-12-31"
 
@@ -9,7 +9,7 @@ medium = 35.0
 high = 55.0
 
 [flags]
-disagree_threshold = 40.0   # |OBS − NRI| at or above this → sources_disagree
+disagree_threshold = 50.0   # |OBS − NRI| at or above this → sources_disagree
 min_coverage = 0.98         # share of non-null days below this → low_coverage
 
 [hazards.winter]

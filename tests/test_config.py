@@ -6,11 +6,11 @@ from app.config import Settings, load_scoring_config
 
 def test_scoring_weights_sum_to_one():
     cfg = load_scoring_config()
-    assert abs(sum(h["weight"] for h in cfg["hazards"].values()) - 1.0) < 1e-9
+    assert abs(sum(h.weight for h in cfg.hazards.values()) - 1.0) < 1e-9
 
 
 def test_hurricane_has_no_observed_component():
-    assert load_scoring_config()["hazards"]["hurricane"]["alpha"] == 0.0
+    assert load_scoring_config().hazards["hurricane"].alpha == 0.0
 
 
 def test_hubs_json_has_15_hubs_6_midwest():

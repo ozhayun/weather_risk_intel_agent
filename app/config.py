@@ -6,6 +6,8 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.domain.scoring import ScoringConfig
+
 ROOT = Path(__file__).resolve().parent.parent
 SCORING_CONFIG_PATH = ROOT / "config" / "scoring.toml"
 
@@ -24,5 +26,5 @@ def get_settings() -> Settings:
     return Settings()
 
 
-def load_scoring_config(path: Path = SCORING_CONFIG_PATH) -> dict:
-    return tomllib.loads(path.read_text())
+def load_scoring_config(path: Path = SCORING_CONFIG_PATH) -> ScoringConfig:
+    return ScoringConfig.model_validate(tomllib.loads(path.read_text()))
