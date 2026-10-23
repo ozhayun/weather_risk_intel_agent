@@ -4,7 +4,7 @@ An AI agent that helps logistics analysts decide which distribution hubs to prio
 
 - **Deterministic scoring.** The LLM never produces a number or a ranking. It turns the question into a JSON-schema-validated `QueryPlan`; code computes the result; the LLM explains it, and a validator rejects numbers in the answer and caveats that don't match the result (a soft check: integers within ±0.5 and small counts 0–20 pass).
 - **Chat UI** (Streamlit) → **API** (FastAPI) → **agent pipeline** → **SQLite** static dataset.
-- **Eval set:** 18 cases, **18/18 on `gpt-4o-mini` across 3 runs**.
+- **Eval set:** 18 cases, plus 12 prompt-injection and follow-up tests. **30/30 on `gpt-4o-mini` across 3 runs.**
 
 ## Quickstart
 
@@ -72,8 +72,9 @@ Streamlit ──HTTP──▶ FastAPI /chat ──▶ interpret (LLM → QueryPl
 ## Tests and evaluation
 
 ```bash
-uv run pytest            # 152 unit, pipeline, API and UI tests; no network, no LLM
-uv run pytest -m eval -v # 18 end-to-end cases with the real LLM (needs a key)
+uv run pytest              # 181 unit, pipeline, API, UI and security tests; no network, no LLM
+uv run pytest -m eval -v   # 30 real-LLM tests: 18 eval cases + 12 security/follow-up (needs a key)
+uv run pytest -m security  # just the prompt-injection and follow-up tests
 ```
 
 The eval set (`tests/eval/cases.json`) covers:
@@ -89,6 +90,32 @@ Each case checks:
 - that every number in the answer comes from the result
 
 Latest result: **18/18, stable over 3 runs** on `openai/gpt-4o-mini`. The eval caught real bugs, now fixed: a hub mention written as "Chicago (Wheeling), IL" wasn't recognised, and a literal example year in the prompt anchored "this year" to 2023.
+
+## Prompt-injection safety
+
+User text is treated as untrusted data. Defences are layered, so no single one has to hold:
+
+| Layer | What it does |
+|---|---|
+| Fencing | Every user message, including history, is wrapped in `<user_input>…</user_input>`. Tags the user types are stripped first, so the fence can't be closed early. |
+| Instructions | Both system prompts state that fenced text is untrusted and never overrides the instructions (no role changes, prompt reveals, or invented numbers). |
+| Schema | The interpreter can only emit one of five typed tools. The narrator's numbers must match the computed result (grounding validator). |
+| Output guards | Any reply, caveat or follow-up that repeats lines of the instructions is replaced with a refusal. Clarifying questions are capped at 500 characters. City names a user typed are stripped of markup and shortened before being echoed. |
+| Follow-ups | The narrator may only suggest answerable forms: another hazard, another real hub, "why is X's risk {level}?", or a day statistic for 2021–2025. A deterministic filter drops seasons, forecasts, trends, ROI, costs and out-of-window years. |
+
+`tests/test_security.py` covers the deterministic layers. `tests/eval/test_security.py` runs 9 attacks against the real LLM:
+- prompt reveal and translation
+- forged closing tag
+- an admin "policy" hijacking a valid question
+- "reply only HACKED"
+- secret exfiltration
+- injection inside a hub name
+- a fake score in the question
+- role-play
+
+Each attack asserts that nothing leaks, no forbidden output appears, the plan and ranking are unchanged, and the answer is still grounded. A separate test feeds every suggested follow-up back to the agent and requires a real answer.
+
+Ablation check: with these protections removed, the follow-up tests fail (reproducing the "other seasons" bug) and the "HACKED" attack succeeds.
 
 ## Assumptions, uncertainty and scope
 
