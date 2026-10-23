@@ -86,3 +86,11 @@ def test_interpret_prompt_lists_all_hubs(ctx):
     assert all(h.name in content for h in ctx.registry.all())
     assert "alpha town" in content  # aliases
     assert "snow_day" in content  # stat catalog
+
+
+def test_execute_failure_is_graceful(ctx, monkeypatch):
+    agent = Agent(FakeLLM([RANK]), ctx)
+    monkeypatch.setattr(agent, "execute", lambda plan: (_ for _ in ()).throw(KeyError("bug")))
+    out = agent.run("s1", "q")
+    assert out.result is None and out.plan == RANK
+    assert "couldn't compute" in out.answer.text
