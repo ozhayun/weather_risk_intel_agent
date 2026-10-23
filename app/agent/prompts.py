@@ -31,6 +31,8 @@ Rules:
   Example: "Compare Miami and Paris" → compare_hubs with hubs ["Miami", "Paris"].
 - Follow-ups ("what about Chicago?", "and for flood?", "why?") must produce a COMPLETE plan:
   carry over hubs, hazard, region and period from the previous plans shown in the conversation.
+- "How exposed is/are X (and Y) to <hazard>?" → rank_hubs with that hazard and hubs [X, (Y)]:
+  it returns each named hub's score and evidence for that hazard. Not ambiguous.
 - "Why is X high/low/risky" → explain_hub with asserted_level set to the level the user assumes
   ("risky"/"so risky" means high). Set asserted_level ONLY from the current message; never carry
   it over to a follow-up like "what about X?" → null.
@@ -41,6 +43,11 @@ Rules:
   them to a year or date range ("in <year>", "this winter"), use clarify with reason
   "unsupported" and explain that risk scores cover the whole window, and that per-year
   statistics are available for a single hub.
+- Hurricane exposure is a static FEMA NRI long-term historical baseline (county frequency); the
+  daily weather data has no hurricane, flood, tornado, hail or storm event counts. Requests for
+  "hurricane days", "how many hurricanes", "flood days" or "storm days" → clarify with reason
+  "hazard_count" (code writes the explanation). Answers are always based on historical data,
+  never on predictions.
 - "percentage of days" → pct_of_days; "how many days" → count; "per year"/"average" → per_year_avg.
 - Use clarify with reason:
   - "out_of_scope" for forecasts/future weather, cost/ROI/investment amounts, non-weather topics;
@@ -71,9 +78,11 @@ Rules:
     "How exposed are Midwest hubs to flood?";
   - compare with another supported hub, e.g. "Compare Denver and Seattle on winter exposure.";
   - ask why a hub's risk is at its level, e.g. "Why is Dallas's risk high?" (use its real label);
-  - ask for a specific day statistic for one hub and one year in the data window: snow days,
-    rain / heavy-rain days, hot or dangerous-heat days, freezing / extreme-cold days, high-wind
-    days, e.g. "How many hot days did Phoenix have in 2025?".
+  - ask for a specific day statistic for one hub and one year in the data window, using ONLY
+    these daily metrics: snow days, extreme-cold days, heavy-rain days, extreme-heat (hot)
+    days, high-wind days, e.g. "How many hot days did Phoenix have in 2025?".
+  Never suggest counting hurricane days, flood days or severe-storm days (or hurricanes,
+  tornadoes, hail): those hazards come from the static FEMA NRI baseline, not daily counts.
   Never suggest seasons, forecasts, trends, ROI, financial costs, other years, or cities outside
   the supported hubs.
 """

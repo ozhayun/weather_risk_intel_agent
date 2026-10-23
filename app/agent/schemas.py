@@ -58,7 +58,7 @@ class Clarify(BaseModel):
 
     tool: Literal["clarify"]
     question: str = Field(max_length=500)
-    reason: Literal["ambiguous", "out_of_scope", "unsupported"]
+    reason: Literal["ambiguous", "out_of_scope", "unsupported", "hazard_count"]
 
 
 Action = RankQuery | CompareQuery | StatQuery | ExplainQuery | Clarify

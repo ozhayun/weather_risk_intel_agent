@@ -31,6 +31,12 @@ INTERPRET_FAILED = (
     "I couldn't interpret that — try rephrasing, e.g. 'Rank Midwest hubs by winter risk'."
 )
 EXECUTE_FAILED = "I understood the question but couldn't compute the result. Please try rephrasing."
+HAZARD_COUNT = (
+    "I can't count hurricane, flood or severe-storm days: the daily weather data has no such "
+    "events. Hurricane exposure comes from the static FEMA NRI long-term historical baseline, "
+    "which I can explain or compare across hubs. For daily statistics I can count snow, "
+    "extreme-cold, heavy-rain, extreme-heat and high-wind days for any hub in 2021–2025."
+)
 NARRATE_FAILED = (
     "I computed the result (see the details panel) but couldn't phrase it reliably. "
     "Try asking again."
@@ -71,6 +77,8 @@ class Agent:
         if isinstance(plan.action, Clarify):
             question = plan.action.question
             text = REFUSAL if leaks_instructions(question) else question
+            if plan.action.reason == "hazard_count":  # a fact code owns, not LLM wording
+                text = HAZARD_COUNT
             return ChatOutcome(Answer(text=text), plan, None)
         try:
             result = self.execute(plan)
