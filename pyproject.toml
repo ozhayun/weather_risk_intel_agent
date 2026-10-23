@@ -12,6 +12,7 @@ dependencies = [
     "openai",
     "httpx",
     "streamlit",
+    "python-dotenv>=1.2.4",
 ]
 
 [dependency-groups]
