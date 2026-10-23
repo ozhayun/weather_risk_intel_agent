@@ -36,7 +36,11 @@ def plan_hub_ids(action, ctx) -> set[str]:
 
 def check_plan(action, exp: dict, ctx) -> None:
     if "tool" in exp:
-        assert action.tool == exp["tool"]
+        assert action.tool == exp["tool"], action.model_dump_json()
+    if "tool_in" in exp:
+        assert action.tool in exp["tool_in"], action.model_dump_json()
+    if "hubs_include" in exp:
+        assert set(exp["hubs_include"]) <= plan_hub_ids(action, ctx), action.model_dump_json()
     for key in ("hazard", "region", "metric", "aggregation", "top_n", "asserted_level", "order"):
         if key in exp:
             assert getattr(action, key) == exp[key], key
