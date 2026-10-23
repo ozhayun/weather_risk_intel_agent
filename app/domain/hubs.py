@@ -45,9 +45,9 @@ class HubRegistry:
         self._by_id = {h.hub_id: h for h in hubs}
         self._index: dict[str, Hub] = {}
         for hub in hubs:
-            keys = {hub.hub_id, hub.name, hub.city, f"{hub.city} {hub.state}", *hub.aliases}
-            for key in keys:
+            for key in {hub.hub_id, hub.name, hub.city, *hub.aliases}:
                 self._index[normalize(key)] = hub
+                self._index[normalize(f"{key} {hub.state}")] = hub  # "Name, ST" as listed
 
     @classmethod
     def from_json(cls, path: Path) -> "HubRegistry":

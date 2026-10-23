@@ -25,6 +25,8 @@ REG = HubRegistry.from_json(Path("data/hubs.json"))
         ("the Dallas hub's", "dallas"),
         ("st_louis", "st_louis"),
         ("Chicago (Wheeling)", "chicago"),
+        ("Chicago (Wheeling), IL", "chicago"),
+        ("St. Louis, MO", "st_louis"),
     ],
 )
 def test_resolve_variants(mention, hub_id):
