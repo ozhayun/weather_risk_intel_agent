@@ -39,3 +39,10 @@ def test_export_env_file_sets_provider_keys_without_overriding(tmp_path, monkeyp
     assert os.environ["WRIA_TEST_KEY"] == "from-file"
     assert os.environ["WRIA_TEST_KEEP"] == "from-shell"
     monkeypatch.delenv("WRIA_TEST_KEY")
+
+
+def test_relative_db_path_resolves_against_repo_root(monkeypatch):
+    from app.config import ROOT
+
+    monkeypatch.setenv("DB_PATH", "data/weather.db")
+    assert Settings(_env_file=None).db_path == ROOT / "data" / "weather.db"
