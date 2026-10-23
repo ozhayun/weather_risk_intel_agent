@@ -1,6 +1,6 @@
 # 01 — Requirements & Scope
 
-_Weather Risk Intelligence Agent · status: agreed · 2026-10-23_
+_Weather Risk Intelligence Agent · status: implemented · 2026-10-23_
 
 ## 1. Business context
 
@@ -65,9 +65,11 @@ Each hazard gets a sub-score from 0 to 100. A weighted composite gives the overa
 | Q1 | **Rank / filter** | "Which Midwest hubs are most exposed to winter disruption?" | Ordered hubs + scores + top drivers |
 | Q2 | **Compare** | "Compare Miami and Houston on hurricane and flood" | Side-by-side per-hazard scores, gaps, leader per hazard |
 | Q3 | **Raw historical stat** | "What % of days in Denver last year had snowfall?" | Value + metric definition + source + data coverage (days) |
-| Q4 | **Explain** | "Why is Dallas's risk high?" | Component contributions, main drivers, rank. **Corrects false premises.** |
-| Q5 | **Follow-up** | "What about Chicago?" / "And flood?" / "Why?" | Resolved against conversation context, then handled as Q1–Q4 |
-| Q6 | **Clarify / out of scope** | "Springfield?", "Will it snow tomorrow?", "What's the ROI?" | A clarifying question, or a statement of what is supported |
+| Q4 | **Explain** | "Why is Dallas's risk high?" / "Why is Miami high-risk for winter?" | Component contributions, main drivers, rank. **Corrects false premises** (overall, or per hazard by rank). |
+| Q5 | **Follow-up** | "What about Chicago?" / "And flood?" / "Why?" / "yes" | Resolved against conversation context (previous plan, result summary, reply), then handled as Q1–Q4 |
+| Q6 | **Clarify / out of scope** | "Springfield?", "Will it snow tomorrow?", "What's the ROI?", "How many flood days…?" | A clarifying question ending in one concrete offer, or a statement of what is supported |
+
+Rankings also support **lowest / safest** ("Which hub has the lowest risk?") by sorting ascending.
 
 **Location scope:** the agent answers **only about the 15 hub cities**. For any other city it says it only knows the hub locations and lists them. Nice-to-have: name the nearest hub.
 
@@ -97,21 +99,31 @@ Each hazard gets a sub-score from 0 to 100. A weighted composite gives the overa
 
 ### Guardrails
 - Schema in both directions: the LLM's plan is validated before any code runs, and the result data is the only source for the answer.
-- Eval check: every number in the answer must appear in the result data.
-- Explain queries check the user's premise against the computed label.
+- **Grounding:** a validator checks every number in the answer and caveats against the result data, and the eval re-checks it.
+- **Premise check:** explain queries check the user's premise against the computed label, or against the hazard rank when the premise names a hazard. Code writes the rejection line.
+- **Hazard-day counts:** flood, storm and hurricane day counts are refused in code. Those hazards come from the static FEMA NRI baseline; the daily data has only snow, rain, heat, cold and wind.
+- **Prompt injection:** user text is fenced in `<user_input>` and declared untrusted; a leak guard and a follow-up filter run on all LLM output.
 
-## 7. Requirements traceability
+## 7. Requirements traceability (audited against `ASSIGNMENT.pdf`)
 
-| Assignment requirement | Where addressed |
-|---|---|
-| Public weather/hazard APIs | Data layer (see architecture doc) |
-| Rank/compare by defined KPI | Deterministic scoring, Q1/Q2 |
-| Explain reasoning | Q4 + contribution breakdown |
-| Conversational follow-ups | Q5 |
-| Deterministic scoring | §6 |
-| Chat interface (voice bonus) | Frontend |
-| Alert on score change (bonus) | Deferred (see architecture §10) |
-| Agent exposed via API | Backend |
-| JSON schema between LLM and code | §6 guardrails |
-| Eval set + runner | Eval module |
-| Assumptions / uncertainty / scope | §2, §5, caveats in every answer |
+| Assignment requirement | Status | Where |
+|---|---|---|
+| Answer the 4 example questions | ✅ | eval cases `midwest_winter`, `compare_miami_houston`, `denver_snow`, `dallas_why` |
+| Public APIs for weather and hazard data | ✅ | Open-Meteo Historical + FEMA NRI, fetched by `scripts/` into a committed static dataset |
+| Rank or compare hubs by a defined KPI | ✅ | `docs/02-scoring-model.md`; `rank_hubs` / `compare_hubs` (incl. lowest / safest) |
+| Explain reasoning clearly | ✅ | `explain_hub`: contributions, observed days/yr, NRI percentiles, rank, caveats; "How I got this" panel |
+| Conversational follow-ups | ✅ | session memory (PLAN + RESULT + REPLY); eval: follow-ups, "why?", "yes"/"no" |
+| Deterministic scoring/ranking (not only LLM) | ✅ | `app/domain/` (pure); the LLM never produces numbers (grounding validator) |
+| Chat interface | ✅ | Streamlit `ui/app.py` |
+| Voice (bonus) | ❌ deferred | not implemented |
+| Alert when a hub's risk score changes (bonus) | ❌ deferred | design only: 02 §7 / 03 §10 |
+| Agent exposed through an API the chat uses | ✅ | FastAPI `app/api/`; the UI talks HTTP only |
+| JSON schema between LLM and code | ✅ | `QueryPlan` / `Answer` Pydantic models via Instructor, with retries |
+| Small evaluation set and a way to run it | ✅ | `tests/eval/` (32 cases + 12 security), `uv run pytest -m eval` |
+| Assumptions, uncertainty, scoping | ✅ | §2, §5, 02 §5 flags and §8 limitations, caveats in every answer, README |
+| **Deliverable:** source code + run instructions | ✅ | README quickstart (verified from a clean clone) |
+| **Deliverable:** deploy to a URL (preferred, not mandatory) | ❌ not done | runs locally |
+| **Deliverable:** design doc: architecture, repo structure, storage | ✅ | `docs/03-architecture.md` (+ `architecture.svg`) §2, §5, §8 |
+| **Deliverable:** full AI session (mandatory) | ✅ | `docs/session/claude-code-session.md`; re-export at the very end |
+
+Not done from this doc's own scope: §5's "nice-to-have: name the nearest hub" for non-hub cities.

@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Status: executed.** All 14 tasks are done. Later changes came from review findings and manual testing (UI polish, prompt-injection safety, follow-up and premise fixes, lowest-risk rankings); each one is a merged PR with its own tests. The current design is `docs/03-architecture.md`.
+
 **Goal:** A local, runnable agent that ranks, compares and explains weather-disruption exposure for 15 US hubs. It has a FastAPI backend, a Streamlit chat UI, deterministic scoring and a pytest eval set.
 
 **Architecture:**

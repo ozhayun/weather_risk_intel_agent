@@ -114,7 +114,9 @@ Calibration results:
 - **`disagree_threshold` raised from 40 to 50.** At 40 the flag fired on 29 of 75 hub-hazard pairs, at least one for every hub but Denver, so it said nothing. At 50 it fires on 15.
 - **Heat disagreements are structural.** NRI defines a heat wave *relative to local climate*, while `OBS` counts absolute ≥ 35 °C days. Memphis, for example, has NRI heat at the 99th percentile but only 12 hot days per year.
 
-Ranking for Q1 sorts by `H_h` for the requested hazard, or by `R` for overall. Ties are broken by `hub_id`.
+Ranking for Q1 sorts by `H_h` for the requested hazard, or by `R` for overall. It runs descending by default, or ascending for "lowest / safest" questions. Ties are broken by `hub_id`.
+
+**Single-hazard levels.** The bands above were calibrated for the composite `R`, so they aren't applied to single hazards: single-hazard rankings show no label. When a premise names a hazard ("Why is Miami high-risk for winter?"), the level comes from the hub's rank for that hazard across the 15 hubs: ranks 1–5 are high, 6–10 medium, 11–15 low.
 Values are stored at full precision and rounded to 1 decimal only for display.
 
 ## 5. Uncertainty flags (computed, then passed to the LLM)
