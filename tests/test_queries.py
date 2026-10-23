@@ -125,3 +125,19 @@ def test_rank_non_positive_top_n_returns_all(ctx):
 def test_hazard_ranking_rows_have_no_composite_label(ctx):
     assert all(row.label is None for row in rank_hubs(ctx, hazard="winter").rows)
     assert all(row.label is not None for row in rank_hubs(ctx).rows)
+
+
+def test_rank_lowest_sorts_ascending(ctx):
+    r = rank_hubs(ctx, order="lowest")
+    assert r.order == "lowest"
+    assert [row.hub_id for row in r.rows] == ["c", "b", "a"]
+    assert [row.rank for row in r.rows] == [1, 2, 3]  # position in this (ascending) list
+
+
+def test_rank_lowest_with_hazard_region_and_top_n(ctx):
+    r = rank_hubs(ctx, hazard="winter", region="midwest", top_n=1, order="lowest")
+    assert [row.hub_id for row in r.rows] == ["b"]
+
+
+def test_rank_default_order_is_highest(ctx):
+    assert rank_hubs(ctx).order == "highest"

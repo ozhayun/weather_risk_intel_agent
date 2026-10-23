@@ -105,3 +105,9 @@ def test_load_context_fails_loudly_on_empty_db(tmp_path):
     connect(tmp_path / "empty.db").close()
     with pytest.raises(RuntimeError, match="no daily weather"):
         load_context(Settings(_env_file=None, db_path=tmp_path / "empty.db"))
+
+
+def test_rankings_lowest_order(client):
+    body = client.get("/rankings", params={"order": "lowest"}).json()
+    assert body["order"] == "lowest" and body["rows"][0]["hub_id"] == "denver"
+    assert client.get("/rankings", params={"order": "sideways"}).status_code == 422
