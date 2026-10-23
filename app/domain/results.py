@@ -59,12 +59,16 @@ class PremiseCheck(BaseModel):
     asserted: Label
     actual: Label
     holds: bool
+    hazard: Hazard | None = None  # None: judged on the composite label
+    rank: int  # 1 = most exposed among all hubs (for `hazard`, or overall)
+    total: int
 
 
 class ExplainResult(BaseModel):
     kind: Literal["explain"] = "explain"
     hub: HubScore
     total_hubs: int
+    focus_hazard: Hazard | None = None
     premise_check: PremiseCheck | None
     caveats: list[str]
 

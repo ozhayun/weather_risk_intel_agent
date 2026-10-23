@@ -29,9 +29,15 @@ from app.domain.queries import (
     get_weather_stat,
     rank_hubs,
 )
-from app.domain.results import Result
+from app.domain.results import CompareResult, ExplainResult, RankResult, Result, StatResult
 
 log = logging.getLogger(__name__)
+# A premise needs a level word in THIS message; otherwise it was carried over from history.
+_LEVEL_WORDS = re.compile(
+    r"\b(high|higher|highest|low|lower|lowest|medium|moderate|risky|riskier|riskiest|safe|"
+    r"safer|safest|dangerous|vulnerable|exposed|worst|bad)\b",
+    re.IGNORECASE,
+)
 _HAZARD_EVENTS = re.compile(r"hurricane|flood|storm|tornado|hail", re.IGNORECASE)
 
 INTERPRET_FAILED = (
@@ -48,6 +54,26 @@ NARRATE_FAILED = (
     "I computed the result (see the details panel) but couldn't phrase it reliably. "
     "Try asking again."
 )
+
+
+REPLY_CHARS = 300
+
+
+def summarize(result: Result | None) -> str:
+    """Entities a follow-up can refer to ("why?", "the second one"), built from the result."""
+    match result:
+        case None:
+            return ""
+        case RankResult():
+            top = ", ".join(f"{r.rank}. {r.name}" for r in result.rows[:5])
+            return f"rank_hubs ({result.hazard}, order {result.order}): {top}"
+        case CompareResult():
+            return "compared: " + ", ".join(h.name for h in result.hubs)
+        case ExplainResult():
+            return f"explained: {result.hub.name}"
+        case StatResult():
+            return f"stat for {result.hub_name} ({result.metric}, {result.period_label})"
+    return f"out of scope: {result.reason}"
 
 
 @dataclass
@@ -71,7 +97,8 @@ class Agent:
         # Clarify plans stay out of history: replaying them made the model repeat refusals.
         executed = outcome.plan and not isinstance(outcome.plan.action, Clarify)
         plan_json = outcome.plan.model_dump_json() if executed else None
-        history.append(Turn(message, plan_json))
+        reply = outcome.answer.text[:REPLY_CHARS]
+        history.append(Turn(message, plan_json, reply, summarize(outcome.result)))
         return outcome
 
     def _run(self, message: str, history: list[Turn]) -> ChatOutcome:
@@ -86,6 +113,13 @@ class Agent:
         except Exception:
             log.exception("interpret failed")
             return ChatOutcome(Answer(text=INTERPRET_FAILED), None, None)
+        if (
+            isinstance(plan.action, ExplainQuery)
+            and plan.action.asserted_level
+            and not _LEVEL_WORDS.search(message)
+        ):
+            action = plan.action.model_copy(update={"asserted_level": None})
+            plan = plan.model_copy(update={"action": action})
         if isinstance(plan.action, Clarify):
             question = plan.action.question
             text = REFUSAL if leaks_instructions(question) else question
@@ -102,6 +136,7 @@ class Agent:
         try:
             messages = narrate_messages(message, result, hubs, self.ctx.window_label)
             answer = self._safe(self.llm.complete(Answer, messages, context={"result": result}))
+            answer = self._with_premise(answer, result)
         except Exception:
             log.exception("narrate failed")
             answer = Answer(text=NARRATE_FAILED, caveats=result.caveats[:3])
@@ -117,6 +152,19 @@ class Agent:
         followups = filter_followups(answer.suggested_followups, first, last)
         return answer.model_copy(update={"suggested_followups": followups})
 
+    @staticmethod
+    def _with_premise(answer: Answer, result: Result) -> Answer:
+        """A false premise is rejected by code, first, whatever the narration says."""
+        check = getattr(result, "premise_check", None)
+        if result.kind != "explain" or check is None or check.holds:
+            return answer
+        scope = f" for {check.hazard.replace('_', ' ')}" if check.hazard else " overall"
+        lead = (
+            f"**Premise check:** {result.hub.name} is not {check.asserted}-risk{scope}: "
+            f"its exposure is {check.actual} (rank {check.rank} of {check.total})."
+        )
+        return answer.model_copy(update={"text": f"{lead}\n\n{answer.text}"})
+
     def execute(self, plan: QueryPlan) -> Result:
         match plan.action:
             case RankQuery() as a:
@@ -126,5 +174,5 @@ class Agent:
             case StatQuery() as a:
                 return get_weather_stat(self.ctx, a.hub, a.metric, a.aggregation, a.period)
             case ExplainQuery() as a:
-                return explain_hub(self.ctx, a.hub, a.asserted_level)
+                return explain_hub(self.ctx, a.hub, a.asserted_level, a.hazard)
         raise ValueError(f"no executor for {plan.action.tool}")

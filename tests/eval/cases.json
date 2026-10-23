@@ -342,5 +342,74 @@
    "tool": "clarify",
    "answer_contains": "FEMA NRI"
   }
+ },
+ {
+  "id": "yes_after_offer",
+  "turns": [
+   "What's the ROI of a resilience upgrade at the Miami hub?",
+   "yes"
+  ],
+  "expect": {
+   "tool_in": [
+    "explain_hub",
+    "rank_hubs",
+    "compare_hubs",
+    "get_weather_stat"
+   ],
+   "hubs_include": [
+    "miami"
+   ]
+  }
+ },
+ {
+  "id": "no_after_offer",
+  "turns": [
+   "What's the ROI of a resilience upgrade at the Miami hub?",
+   "no"
+  ],
+  "expect": {
+   "tool": "clarify"
+  }
+ },
+ {
+  "id": "why_after_top",
+  "turns": [
+   "Which hub has the highest overall risk?",
+   "Why?"
+  ],
+  "expect": {
+   "tool": "explain_hub",
+   "hubs": [
+    "houston"
+   ]
+  }
+ },
+ {
+  "id": "miami_winter_premise",
+  "turns": [
+   "Why is Miami such a high-risk hub for winter hazards?"
+  ],
+  "expect": {
+   "tool": "explain_hub",
+   "hubs": [
+    "miami"
+   ],
+   "hazard": "winter",
+   "premise_holds": false,
+   "answer_contains": "Premise check"
+  }
+ },
+ {
+  "id": "lowest_hurricane_south",
+  "turns": [
+   "Which southern hub has the lowest hurricane exposure?"
+  ],
+  "expect": {
+   "tool": "rank_hubs",
+   "hazard": "hurricane",
+   "region": "south",
+   "order": "lowest",
+   "top_hub": "dallas"
+  }
  }
 ]

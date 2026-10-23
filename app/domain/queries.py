@@ -216,21 +216,43 @@ def get_weather_stat(
     )
 
 
+def _tercile(rank: int, total: int) -> Label:
+    """Hazard-level label by rank across hubs (composite bands don't fit single hazards)."""
+    if rank <= total / 3:
+        return "high"
+    return "medium" if rank <= 2 * total / 3 else "low"
+
+
 def explain_hub(
-    ctx: QueryContext, hub: str, asserted_level: Label | None = None
+    ctx: QueryContext,
+    hub: str,
+    asserted_level: Label | None = None,
+    hazard: Hazard | None = None,
 ) -> ExplainResult | ScopeResult:
     resolved, scope = _resolve(ctx, [hub])
     if scope:
         return scope
     score = ctx.book.hubs[resolved[0].hub_id]
+    total = len(ctx.book.hubs)
     check = None
     if asserted_level is not None:
+        if hazard is None:
+            rank, actual = score.overall_rank, score.label
+        else:
+            rank = [h.hub_id for h in ctx.book.ranked(hazard)].index(score.hub_id) + 1
+            actual = _tercile(rank, total)
         check = PremiseCheck(
-            asserted=asserted_level, actual=score.label, holds=asserted_level == score.label
+            asserted=asserted_level,
+            actual=actual,
+            holds=asserted_level == actual,
+            hazard=hazard,
+            rank=rank,
+            total=total,
         )
     return ExplainResult(
         hub=score,
-        total_hubs=len(ctx.book.hubs),
+        total_hubs=total,
+        focus_hazard=hazard,
         premise_check=check,
         caveats=_caveats(ctx, [score], list(ctx.cfg.hazards)),
     )

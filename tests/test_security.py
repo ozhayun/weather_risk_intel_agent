@@ -169,3 +169,17 @@ def test_interpret_rules_state_hurricane_is_static_nri():
 
 def test_narrate_rules_define_percentile_direction():
     assert "P% of US counties have a LOWER frequency" in NARRATE_RULES
+
+
+def test_narrate_rules_contain_no_copyable_premise_example():
+    # A literal example ("X is not high-risk for winter...") was copied verbatim into answers.
+    assert "for winter" not in NARRATE_RULES
+    assert "premise_check is null" in NARRATE_RULES
+
+
+def test_narrator_sees_values_rounded_to_one_decimal(ctx):
+    import re
+
+    result = compare_hubs(ctx, ["a", "b"])
+    content = narrate_messages("q", result, ctx.registry.all())[1]["content"]
+    assert not re.search(r"\d\.\d{2,}", content.split("Result JSON:")[1])
