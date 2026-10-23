@@ -4,6 +4,7 @@ import tomllib
 from functools import lru_cache
 from pathlib import Path
 
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.domain.scoring import ScoringConfig
@@ -21,8 +22,14 @@ class Settings(BaseSettings):
     api_url: str = "http://localhost:8000"
 
 
+def export_env_file(path: Path) -> None:
+    """Provider SDKs read keys from os.environ; real env vars win over the file."""
+    load_dotenv(path, override=False)
+
+
 @lru_cache
 def get_settings() -> Settings:
+    export_env_file(ROOT / ".env")
     return Settings()
 
 
