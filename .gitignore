@@ -26,3 +26,6 @@ data/*.db
 .DS_Store
 .idea/
 .vscode/
+
+# Browser-test artifacts
+.playwright-mcp/
