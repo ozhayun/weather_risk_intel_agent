@@ -20,7 +20,7 @@ EXAMPLES = [
 
 SIDEBAR_CSS = """
 <style>
-section[data-testid="stSidebar"] { width: 560px !important; min-width: 560px !important; }
+section[data-testid="stSidebar"] { width: 600px !important; min-width: 600px !important; }
 </style>
 """
 ROW_PX = 35  # st.dataframe row height; header counts as one row
@@ -149,7 +149,7 @@ def send(question: str) -> None:
 
 def sidebar() -> None:
     with st.sidebar:
-        st.header("Hub risk ranking")
+        st.header("Hub Multi-Hazard risk ranking")
         health, error = api("GET", "/health")
         if error:
             st.error(error)
@@ -167,9 +167,9 @@ def sidebar() -> None:
                         "#": h["overall_rank"],
                         "hub": h["name"],
                         "region": h["region"],
-                        "risk": round(h["composite"], 1),
+                        "Overall Risk": round(h["composite"], 1),
                         "label": h["label"],
-                        "peak": h["peak_hazard"].replace("_", " "),
+                        "Dominant Hazard": h["peak_hazard"].replace("_", " "),
                     }
                     for h in hubs
                 ],
@@ -177,11 +177,11 @@ def sidebar() -> None:
                 height=ROW_PX * (len(hubs) + 1) + 3,  # every hub visible, no inner scroll
                 column_config={  # pixel widths sum to < sidebar width, so no column is cut
                     "#": st.column_config.NumberColumn(width=34),
-                    "hub": st.column_config.TextColumn(width=145),
-                    "region": st.column_config.TextColumn(width=82),
-                    "risk": st.column_config.NumberColumn(format="%.1f", width=52),
-                    "label": st.column_config.TextColumn(width=66),
-                    "peak": st.column_config.TextColumn(width=110),
+                    "hub": st.column_config.TextColumn(width=140),
+                    "region": st.column_config.TextColumn(width=80),
+                    "Overall Risk": st.column_config.NumberColumn(format="%.1f", width=92),
+                    "label": st.column_config.TextColumn(width=64),
+                    "Dominant Hazard": st.column_config.TextColumn(width=125),
                 },
             )
         st.subheader("Try")
