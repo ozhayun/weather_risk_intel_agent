@@ -1,6 +1,8 @@
 # 03 — Architecture
 
-_status: agreed · 2026-10-23 · scope: core agent (alerts and deployment are deferred)_
+_status: implemented · 2026-10-23 · scope: core agent (alerts, deployment and voice are deferred)_
+
+![Architecture](architecture.svg)
 
 ## 1. Principles
 
@@ -55,26 +57,37 @@ sequenceDiagram
     participant D as Domain
     U->>A: {session_id, message}
     A->>P: run(session, message)
-    P->>L: interpret(history + message) → QueryPlan (schema, max_retries)
+    alt message asks to count flood / storm / hurricane days
+        P-->>A: fixed FEMA NRI refusal (code, no LLM call)
+    end
+    P->>L: interpret(history + <user_input>message</user_input>) → QueryPlan (schema, max_retries)
     alt plan is Clarify
-        P-->>A: Answer(text = plan.question)
+        P-->>A: Answer(text = plan.question, prompt-leak guard)
     else plan is a tool call
         P->>D: resolve hubs / validate period (code)
         alt unknown hub or year out of range
             D-->>P: ScopeResult (templated message, lists the hubs)
         else valid
             D-->>P: Result (scores, contributions, flags, caveats)
-            P->>L: narrate(message + Result JSON) → Answer (schema + number-grounding validator)
+            P->>L: narrate(message + Result JSON, 1-decimal) → Answer (schema + grounding validator)
+            P->>P: guards: premise-check lead line, prompt-leak guard, follow-up filter
         end
     end
-    P->>P: append turn (message, plan JSON) to session
+    P->>P: append turn (message, PLAN, RESULT summary, REPLY) to session
     A-->>U: ChatResponse {answer, plan, result}
 ```
 
-- **Two LLM calls at most per turn.** Clarification needs one; scope errors need one.
-- **Follow-ups:** `interpret` sees the last N turns, each as *message + plan JSON*. It must output a **complete** plan, so execution is stateless.
-  Example: "What about Chicago?" after a Dallas explain query becomes `ExplainQuery(hub="Chicago")`.
-- **Number grounding:** the `Answer` model's validator, which receives the `Result` as Instructor validation context, checks that every number in `text` appears in the result (after rounding). If one doesn't, Instructor retries and feeds the error back to the model.
+- **At most two LLM calls per turn.** Clarifications and scope errors need one; hazard-count questions need none.
+- **Follow-ups:** `interpret` sees the last 4 turns. Each turn shows the user message, the PLAN that ran (clarify plans are omitted, because replaying them made the model repeat refusals), a code-built RESULT summary (e.g. "1. Houston, 2. Dallas") and the REPLY the user saw. `interpret` must output a **complete** plan, so execution is stateless.
+  - "What about Chicago?" after a Dallas explain query → `ExplainQuery(hub="Chicago")`
+  - "Why?" after a ranking → explain the hub ranked 1
+  - "yes" → the offer in the previous REPLY
+- **Number grounding:** the `Answer` validator receives the `Result` as Instructor validation context. Every number in `text` and `caveats` must match a value in the result (±0.05, or ±0.5 for integers; years 2021–2025 and integers 0–20 always pass). If one doesn't, Instructor retries and feeds the error back to the model. The narrator sees values rounded to 1 decimal, so it never has to round anything itself.
+- **Deterministic guards after the LLM** (`app/agent/guards.py`, `pipeline.py`):
+  - **False premise:** the answer opens with a premise-check line written by code.
+  - **Prompt leaks:** any reply that repeats lines of the instructions is replaced with a refusal.
+  - **Follow-ups:** suggestions the tools can't answer (seasons, forecasts, ROI, hazard-day counts, years outside the window) are dropped.
+  - **Carried-over premises:** `asserted_level` is dropped unless the current message states a level.
 
 ## 4. Agent tools (the `QueryPlan` contract)
 
@@ -89,7 +102,8 @@ class RankQuery(BaseModel):      tool: Literal["rank_hubs"]
                                  hazard: Hazard | Literal["overall"] = "overall"
                                  region: Region | None = None
                                  hubs: list[str] = []          # raw mentions, resolved in code
-                                 top_n: int | None = None
+                                 top_n: int | None = None      # ≥ 1
+                                 order: Literal["highest", "lowest"] = "highest"   # "safest" → lowest
 class CompareQuery(BaseModel):   tool: Literal["compare_hubs"]
                                  hubs: list[str]  (min 2)
                                  hazards: list[Hazard] = []    # empty = all + overall
@@ -100,28 +114,33 @@ class StatQuery(BaseModel):      tool: Literal["get_weather_stat"]
                                  period: Period
 class ExplainQuery(BaseModel):   tool: Literal["explain_hub"]
                                  hub: str
+                                 hazard: Hazard | None = None  # "high-risk for winter" → winter
                                  asserted_level: Literal["low", "medium", "high"] | None   # user's premise
 class Clarify(BaseModel):        tool: Literal["clarify"]
-                                 question: str
-                                 reason: Literal["ambiguous", "out_of_scope", "unsupported"]
+                                 question: str  (max 500 chars)
+                                 reason: Literal["ambiguous", "out_of_scope", "unsupported", "hazard_count"]
 
 class QueryPlan(BaseModel):
     action: Annotated[RankQuery | CompareQuery | StatQuery | ExplainQuery | Clarify,
                       Field(discriminator="tool")]
+    # a bare tool call without the `action` wrapper is wrapped before validation (gpt-4o-mini quirk)
 ```
 
 Design choices:
 - **Hub names are free strings, not an enum.** With an enum, "Tokyo" would be forced onto the nearest valid hub. The code resolves names against `hubs.json` aliases. An unknown name returns a `ScopeResult` that lists the 15 hubs.
 - **`period` is symbolic.** The code maps `last_year` to 2025 (the last year in the dataset), so the LLM does no date math.
-- **`asserted_level` makes the premise check deterministic.** The code compares it with the computed label, and the result carries `premise_check {asserted, actual, holds}`.
+- **`asserted_level` makes the premise check deterministic.** The result carries `premise_check {asserted, actual, holds, hazard, rank, total}`.
+  - **Overall premise:** compared with the composite label.
+  - **Hazard premise:** judged by the hub's rank for that hazard across the 15 hubs (top third high, middle medium, bottom third low). "Why is Miami high-risk for winter?" → winter rank 14 of 15 → low → rejected.
+- **`order`** lets "lowest / safest" rankings sort ascending. The result carries `order` so the narrator can't call the safest hub "highest".
 
 | Tool | Executor (`app/domain/queries.py`) | Result |
 |---|---|---|
-| `rank_hubs` | filter by region/hubs → sort by `H_hazard` or `R` → top-n | `RankResult[rows: hub, score, label, top_drivers, flags]` |
+| `rank_hubs` | filter by region/hubs → sort by `H_hazard` or `R` (descending, or ascending for `order="lowest"`) → top-n | `RankResult[order, rows: hub, score, label (overall only), top_drivers, hazard_detail, flags]` |
 | `compare_hubs` | per-hazard `H`, `OBS`, `NRI` per hub; leader and gap per hazard | `CompareResult` |
 | `get_weather_stat` | filter the hub's daily rows to the period → count / pct / per-year | `StatResult[value, condition, matched_days, days_in_period, days_with_data, source]` |
-| `explain_hub` | composite breakdown: contributions `c_h`, `OBS` metrics, NRI percentiles, rank, premise check | `ExplainResult` |
-| `clarify` | none | the question is returned as the answer |
+| `explain_hub` | composite breakdown: contributions `c_h`, `OBS` metrics, NRI percentiles, rank, premise check (overall or per hazard) | `ExplainResult[hub, focus_hazard, premise_check]` |
+| `clarify` | none | the question is returned as the answer. It ends with one concrete yes/no offer, so a following "yes" can be answered |
 
 Every `Result` carries `caveats: list[str]` and per-hub `flags`, as defined in the scoring doc §5.
 
@@ -176,7 +195,7 @@ What is **not** stored, and why:
 | POST | `/chat` | `{session_id?: str, message: str}` | `ChatResponse {session_id, answer: Answer, plan: QueryPlan, result: Result \| null}` | yes |
 | GET | `/hubs` | — | `[{hub_id, name, state, region, composite, label, peak_hazard, overall_rank}]` | no |
 | GET | `/hubs/{hub}` | — | `HubScore` (id or alias; all hazards: `score`, `observed_score`, `nri_score`, contributions, flags); 404 if unknown | no |
-| GET | `/rankings` | `hazard?`, `region?`, `top_n?` | `RankResult` | no |
+| GET | `/rankings` | `hazard?`, `region?`, `top_n?` (≥ 1), `order?` (`highest`\|`lowest`) | `RankResult` | no |
 | GET | `/health` | — | `{status, llm_model, llm_ready, scoring_version, dataset: dataset_meta}` | no |
 
 - The deterministic endpoints let the UI draw tables without the LLM. Tests and evals also use them as the **source of truth**.
@@ -207,27 +226,36 @@ weather_risk_intel_agent/
 │   ├── data/
 │   │   └── db.py            # schema, connect, read functions
 │   ├── agent/
-│   │   ├── schemas.py       # QueryPlan union, Answer (+ grounding validator)
-│   │   ├── prompts.py
+│   │   ├── schemas.py       # QueryPlan union, Answer (+ grounding validator), Turn
+│   │   ├── prompts.py       # rules, SECURITY_RULES, <user_input> fencing, history rendering
+│   │   ├── guards.py        # prompt-leak detector, follow-up filter, hazard-count check
 │   │   ├── llm.py           # StructuredLLM protocol + Instructor implementation
-│   │   └── pipeline.py      # interpret → execute → narrate, sessions
+│   │   └── pipeline.py      # pre-check → interpret → execute → narrate → guards, sessions
 │   └── api/
 │       ├── main.py          # app, lifespan (build ScoreBook), routes
 │       └── models.py        # ChatRequest / ChatResponse
 ├── ui/app.py                # Streamlit chat
 ├── scripts/
 │   ├── build_nri_subset.py
-│   └── ingest.py            # includes Open-Meteo fetch (throttle + retry)
+│   ├── ingest.py            # includes Open-Meteo fetch (throttle + retry)
+│   ├── score_report.py      # calibration table
+│   └── export_session.py    # Claude Code transcript → markdown (secrets redacted)
 ├── config/scoring.toml
 ├── data/                    # hubs.json, nri_hubs.csv, weather.db (all committed)
 ├── tests/
-│   ├── test_metrics.py  test_scoring.py  test_hubs.py  test_queries.py
-│   ├── test_pipeline.py     # fake LLM
+│   ├── conftest.py  fakes.py                     # synthetic 3-hub context, FakeLLM
+│   ├── test_config.py  test_db.py  test_ingest.py  test_metrics.py  test_scoring.py
+│   ├── test_hubs.py  test_queries.py  test_schemas.py
+│   ├── test_pipeline.py     # fake LLM: routing, memory, guards, premise lead
+│   ├── test_security.py     # fencing, leak guard, follow-up filter (no LLM)
 │   ├── test_api.py          # TestClient
+│   ├── test_ui.py           # Streamlit AppTest against a live fake-LLM API
 │   └── eval/
-│       ├── cases.json       # question → expected tool/args/assertions
-│       └── test_eval.py     # @pytest.mark.eval, real LLM
-├── docs/                    # 01 requirements, 02 scoring, 03 architecture
+│       ├── cases.json       # question → expected tool/args/assertions (32 cases)
+│       ├── test_eval.py     # @pytest.mark.eval, real LLM
+│       └── test_security.py # @pytest.mark.security: 9 injection attacks + follow-up round-trip
+├── docs/                    # 01 requirements, 02 scoring, 03 architecture (+ architecture.svg),
+│                            # 04 implementation plan, session/ (AI session transcript)
 ├── .env.example  pyproject.toml  CLAUDE.md  README.md
 ```
 
@@ -238,8 +266,13 @@ The Open-Meteo client lives in `scripts/`, not `app/data/`, because the app neve
 | Level | What it checks | LLM |
 |---|---|---|
 | Unit | metrics, scoring formula (hand-computed fixtures), hub resolution, executors, premise check | no |
-| Pipeline | routing and memory with a fake LLM; scope messages; grounding validator rejects invented numbers | fake |
-| **Eval** (`-m eval`) | ~15 cases covering all query types: the 4 assignment questions, follow-ups, a non-hub city, an unsupported year, a false premise, a forecast request. Checks the plan (tool and args) and that the answer is grounded. Expected values come from the deterministic endpoints, not hard-coded numbers. | real |
+| Pipeline | routing and memory with a fake LLM; scope messages; grounding rejects invented numbers; premise lead; carried-over premises dropped | fake |
+| Security | `<user_input>` fencing, forged-tag stripping, leak guard, follow-up filter, sanitized echo, hazard-count pre-check | no |
+| UI | Streamlit AppTest: API down, non-JSON errors, example/follow-up buttons, ranking table | fake |
+| **Eval** (`-m eval`) | 32 cases covering every query type. Includes the 4 assignment questions, follow-ups ("why?", "yes"/"no", "what about X?"), aliases, lowest/safest rankings, a non-hub city, out-of-window years, hazard-day counts, a forecast, ROI, and false premises (overall and per hazard). Checks the plan, the deterministic outcome and answer grounding. | real |
+| **Security** (`-m security`) | 9 prompt-injection attacks (no leak, no behaviour change, ranking unchanged) + every suggested follow-up must be answerable | real |
+
+Latest run: 240 offline tests pass. The real-LLM tests pass 44/44, twice, on `gpt-4o-mini`.
 
 ## 10. Deferred
 
