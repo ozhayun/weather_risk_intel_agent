@@ -144,7 +144,7 @@ Q3 answers are computed directly from `daily_weather`. The LLM only *picks* a me
 
 - **Aggregations:** `count`, `pct_of_days`, `per_year_avg`.
 - **Time ranges:** a single year (2021–2025) or the full window.
-- **Every result includes:** the condition, `days_total`, `days_with_data`, and the source.
+- **Every result includes:** the condition, `matched_days`, `days_in_period`, `days_with_data`, and the source.
 - **Probe example:** Denver 2025, `snow_day`, `pct_of_days` → **10.1%**.
 
 ## 7. Score snapshots and alerts (bonus, deferred)
