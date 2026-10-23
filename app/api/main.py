@@ -99,8 +99,9 @@ def build_app(agent_factory: AgentFactory | None = None) -> FastAPI:
         hazard: Hazard | Literal["overall"] = "overall",
         region: Region | None = None,
         top_n: int | None = Query(default=None, ge=1),
+        order: Literal["highest", "lowest"] = "highest",
     ) -> RankResult:
-        return rank_hubs(request.app.state.ctx, hazard, region, None, top_n)
+        return rank_hubs(request.app.state.ctx, hazard, region, None, top_n, order)
 
     @app.get("/health")
     def health(request: Request) -> dict:

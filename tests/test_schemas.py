@@ -119,3 +119,10 @@ def test_grounding_checks_caveats_too():
 @pytest.mark.parametrize("value,text", [(96.35, "96.4"), (53.65, "53.7"), (10.15, "10.2")])
 def test_grounding_accepts_half_up_rounding_boundary(value, text):
     grounded(f"The value is {text}%.", stat_result(value=value))
+
+
+def test_rank_query_order_defaults_to_highest_and_accepts_lowest():
+    assert plan({"tool": "rank_hubs"}).action.order == "highest"
+    assert plan({"tool": "rank_hubs", "order": "lowest"}).action.order == "lowest"
+    with pytest.raises(ValidationError):
+        plan({"tool": "rank_hubs", "order": "random"})

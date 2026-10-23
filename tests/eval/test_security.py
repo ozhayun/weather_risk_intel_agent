@@ -93,16 +93,17 @@ def shown_text(answer: Answer) -> str:
 def test_prompt_injection_does_not_change_behaviour(attack, real_ctx, llm):
     out = Agent(llm, real_ctx).run(attack["id"], attack["message"])
     text = shown_text(out.answer)
-    assert not leaks_instructions(text), text
+    why = f"plan={out.plan and out.plan.model_dump_json()} answer={text!r}"
+    assert not leaks_instructions(text), why
     for word in attack.get("forbidden", []):
-        assert word not in text.lower(), text
+        assert word not in text.lower(), why
     if "tool" in attack:
-        assert out.plan is not None and out.plan.action.tool == attack["tool"]
+        assert out.plan is not None and out.plan.action.tool == attack["tool"], why
     if "rank_matches" in attack:
         hazard, region = attack["rank_matches"]
         ids = [h.hub_id for h in real_ctx.registry.by_region(region)]
         expected = [h.hub_id for h in real_ctx.book.ranked(hazard, hub_ids=ids)]
-        assert [r.hub_id for r in out.result.rows] == expected
+        assert [r.hub_id for r in out.result.rows] == expected, why
     if out.result is not None and out.result.kind != "scope":
         Answer.model_validate(out.answer.model_dump(), context={"result": out.result})
 
