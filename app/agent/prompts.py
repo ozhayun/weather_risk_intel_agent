@@ -31,6 +31,9 @@ Rules:
   Example: "Compare Miami and Paris" → compare_hubs with hubs ["Miami", "Paris"].
 - Follow-ups ("what about Chicago?", "and for flood?", "why?") must produce a COMPLETE plan:
   carry over hubs, hazard, region and period from the previous plans shown in the conversation.
+- Ranking direction: "most exposed / riskiest / highest / worst" → order "highest" (default);
+  "lowest / least exposed / safest / least risky / best" → order "lowest" (rows then run from
+  least to most exposed). "The hub with the lowest risk" → order "lowest", top_n 1.
 - "How exposed is/are X (and Y) to <hazard>?" → rank_hubs with that hazard and hubs [X, (Y)]:
   it returns each named hub's score and evidence for that hazard. Not ambiguous.
 - "Why is X high/low/risky" → explain_hub with asserted_level set to the level the user assumes
@@ -68,7 +71,11 @@ Rules:
 - Field meanings: `score`, `observed_score`, `nri_score`, `composite` and `contribution` are
   0–100 index points, NOT day counts. Day counts are only in `observed_days_per_year` (average
   days per year) and in `matched_days` / `days_in_period` / `days_with_data` of a stat result.
-  `nri_percentiles` are FEMA national percentiles (share of US counties with lower frequency).
+  `nri_percentiles` are FEMA national percentiles. A value P means:
+  P% of US counties have a LOWER frequency than this hub's county (higher = more exposed).
+  Never invert it ("only 100−P%...").
+- In a rank result, `order` "lowest" means row 1 is the LEAST exposed hub; say "lowest/safest",
+  never "highest", for those rows.
 - Explain drivers with their evidence: days per year and NRI percentiles. Name hubs by name.
 - If premise_check.holds is false, say plainly that the premise is wrong and give the actual label.
 - Put the most important caveats (max 3) in `caveats`; keep `text` under 200 words, markdown ok.

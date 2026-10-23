@@ -37,7 +37,7 @@ def plan_hub_ids(action, ctx) -> set[str]:
 def check_plan(action, exp: dict, ctx) -> None:
     if "tool" in exp:
         assert action.tool == exp["tool"]
-    for key in ("hazard", "region", "metric", "aggregation", "top_n", "asserted_level"):
+    for key in ("hazard", "region", "metric", "aggregation", "top_n", "asserted_level", "order"):
         if key in exp:
             assert getattr(action, key) == exp[key], key
     if "period" in exp:
