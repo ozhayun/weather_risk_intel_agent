@@ -4,7 +4,12 @@ import logging
 import re
 from dataclasses import dataclass
 
-from app.agent.guards import REFUSAL, filter_followups, leaks_instructions
+from app.agent.guards import (
+    REFUSAL,
+    asks_hazard_event_count,
+    filter_followups,
+    leaks_instructions,
+)
 from app.agent.llm import StructuredLLM
 from app.agent.prompts import interpret_messages, narrate_messages
 from app.agent.schemas import (
@@ -70,6 +75,9 @@ class Agent:
         return outcome
 
     def _run(self, message: str, history: list[Turn]) -> ChatOutcome:
+        if asks_hazard_event_count(message):  # decided in code: the LLM kept offering fake stats
+            refusal = Clarify(tool="clarify", question=HAZARD_COUNT, reason="hazard_count")
+            return ChatOutcome(Answer(text=HAZARD_COUNT), QueryPlan(action=refusal), None)
         hubs = self.ctx.registry.all()
         try:
             plan = self.llm.complete(
