@@ -4,7 +4,7 @@ An AI agent that helps logistics analysts decide which distribution hubs to prio
 
 - **Deterministic scoring.** The LLM never produces a number or a ranking. It turns the question into a JSON-schema-validated `QueryPlan`; code computes the result; the LLM explains it, and a validator rejects numbers in the answer and caveats that don't match the result (a soft check: integers within ±0.5 and small counts 0–20 pass).
 - **Chat UI** (Streamlit) → **API** (FastAPI) → **agent pipeline** → **SQLite** static dataset.
-- **Eval set:** 22 cases, plus 12 prompt-injection and follow-up tests. **34/34 on `gpt-4o-mini` across 2 runs.**
+- **Eval set:** 25 cases, plus 12 prompt-injection and follow-up tests. **37/37 on `gpt-4o-mini`.**
 
 ## Quickstart
 
@@ -73,8 +73,8 @@ Streamlit ──HTTP──▶ FastAPI /chat ──▶ interpret (LLM → QueryPl
 ## Tests and evaluation
 
 ```bash
-uv run pytest              # 205 unit, pipeline, API, UI and security tests; no network, no LLM
-uv run pytest -m eval -v   # 34 real-LLM tests: 22 eval cases + 12 security/follow-up (needs a key)
+uv run pytest              # 209 unit, pipeline, API, UI and security tests; no network, no LLM
+uv run pytest -m eval -v   # 37 real-LLM tests: 25 eval cases + 12 security/follow-up (needs a key)
 uv run pytest -m security  # just the prompt-injection and follow-up tests
 ```
 
