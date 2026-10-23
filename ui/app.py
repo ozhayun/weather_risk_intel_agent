@@ -153,12 +153,6 @@ def sidebar() -> None:
         health, error = api("GET", "/health")
         if error:
             st.error(error)
-        if health:
-            st.caption(
-                f"Model {health['llm_model']} · scoring v{health['scoring_version']} · "
-                f"data {health['dataset']['window_start'][:4]}–"
-                f"{health['dataset']['window_end'][:4]}"
-            )
         hubs, _ = api("GET", "/hubs") if health else (None, None)
         if hubs:
             st.dataframe(
@@ -189,6 +183,13 @@ def sidebar() -> None:
             st.button(q, key=f"ex-{k}", on_click=ask, args=(q,), disabled=busy())
         if st.button("New conversation", type="primary", disabled=busy()):
             st.session_state.messages, st.session_state.session_id = [], None
+        if health:  # footer: technical details, out of the analyst's way
+            st.divider()
+            st.caption(
+                f"Model {health['llm_model']} · scoring v{health['scoring_version']} · "
+                f"data {health['dataset']['window_start'][:4]}–"
+                f"{health['dataset']['window_end'][:4]}"
+            )
 
 
 st.set_page_config(
