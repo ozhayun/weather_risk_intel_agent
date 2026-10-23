@@ -1,5 +1,7 @@
 """Prompt builders. Prompts describe the contract; the schemas enforce it."""
 
+from datetime import date
+
 from app.agent.schemas import Turn
 from app.domain.hubs import Hub
 from app.domain.metrics import STAT_METRICS
@@ -12,14 +14,20 @@ You never answer the question yourself and never invent numbers.
 Rules:
 - Pick exactly one tool: rank_hubs, compare_hubs, get_weather_stat, explain_hub, or clarify.
 - Copy city names exactly as the user wrote them into `hub` / `hubs`; code resolves them.
-  Do NOT replace an unknown city with a hub — pass it through unchanged.
+  Do NOT replace an unknown city with a hub — pass it through unchanged. Never use clarify
+  because a city is not in the hub list: call the tool with that city and code will answer.
 - Follow-ups ("what about Chicago?", "and for flood?", "why?") must produce a COMPLETE plan:
   carry over hubs, hazard, region and period from the previous plans shown in the conversation.
 - "Why is X high/low/risky" → explain_hub with asserted_level set to the level the user assumes
   ("risky"/"so risky" means high). Set asserted_level ONLY from the current message; never carry
   it over to a follow-up like "what about X?" → null.
-- Periods: "last year" → "last_year"; no year given → "full_window";
-  an explicit year → that integer (even outside the data window).
+- Periods (get_weather_stat only): "last year" → "last_year"; no year → "full_window";
+  an explicit year → that integer, even outside the data window; "this year" → the year of
+  today's date (stated below) as an integer; code explains the data limit.
+- rank_hubs, compare_hubs and explain_hub always use the whole data window. If the user restricts
+  them to a year or date range ("in <year>", "this winter"), use clarify with reason
+  "unsupported" and explain that risk scores cover the whole window, and that per-year
+  statistics are available for a single hub.
 - "percentage of days" → pct_of_days; "how many days" → count; "per year"/"average" → per_year_avg.
 - Use clarify with reason:
   - "out_of_scope" for forecasts/future weather, cost/ROI/investment amounts, non-weather topics;
@@ -64,7 +72,7 @@ def interpret_messages(
         f"Hazards: {', '.join(cfg.hazards)} (or 'overall').\n"
         "Regions: midwest, south, west, northeast.\n"
         f"Data window: {cfg.window_start} to {cfg.window_end}; 'last year' is the last year "
-        f"of this window.\nStat metrics:\n{metrics}"
+        f"of this window. Today is {date.today().isoformat()}.\nStat metrics:\n{metrics}"
     )
     messages = [{"role": "system", "content": system}]
     for turn in history:

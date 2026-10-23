@@ -21,7 +21,7 @@ from app.domain.results import (
     ScopeResult,
     StatResult,
 )
-from app.domain.scoring import Hazard, HubScore, Label, ScoreBook, ScoringConfig, label_for
+from app.domain.scoring import Hazard, HubScore, Label, ScoreBook, ScoringConfig
 
 Period = Literal["last_year", "full_window"] | int
 WEATHER_SOURCE = "Open-Meteo Historical (ERA5 reanalysis, ~10 km grid)"
@@ -111,7 +111,7 @@ def rank_hubs(
                 name=s.name,
                 region=s.region,
                 score=value,
-                label=label_for(value, ctx.cfg.labels),
+                label=s.label if key is None else None,
                 top_drivers=_drivers(s),
                 hazard_detail=None if key is None else s.hazards[key],
                 flags=s.flags,

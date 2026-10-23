@@ -5,6 +5,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from dotenv import load_dotenv
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.domain.scoring import ScoringConfig
@@ -20,6 +21,11 @@ class Settings(BaseSettings):
     db_path: Path = ROOT / "data" / "weather.db"
     hubs_path: Path = ROOT / "data" / "hubs.json"
     api_url: str = "http://localhost:8000"
+
+    @field_validator("db_path", "hubs_path")
+    @classmethod
+    def _relative_to_repo_root(cls, path: Path) -> Path:
+        return path if path.is_absolute() else ROOT / path
 
 
 def export_env_file(path: Path) -> None:

@@ -67,13 +67,13 @@ sequenceDiagram
             P->>L: narrate(message + Result JSON) → Answer (schema + number-grounding validator)
         end
     end
-    P->>P: append turn (message, plan, result summary) to session
+    P->>P: append turn (message, plan JSON) to session
     A-->>U: ChatResponse {answer, plan, result}
 ```
 
 - **Two LLM calls at most per turn.** Clarification needs one; scope errors need one.
 - **Follow-ups:** `interpret` sees the last N turns, each as *message + plan JSON*. It must output a **complete** plan, so execution is stateless.
-  Example: "What about Chicago?" after a Dallas explain query becomes `ExplainQuery(hubs=["Chicago"])`.
+  Example: "What about Chicago?" after a Dallas explain query becomes `ExplainQuery(hub="Chicago")`.
 - **Number grounding:** the `Answer` model's validator, which receives the `Result` as Instructor validation context, checks that every number in `text` appears in the result (after rounding). If one doesn't, Instructor retries and feeds the error back to the model.
 
 ## 4. Agent tools (the `QueryPlan` contract)
@@ -83,7 +83,7 @@ The "tools" are deterministic executors. The LLM selects one by emitting a membe
 ```python
 Hazard = Literal["winter", "hurricane", "flood", "heat", "severe_storms"]
 Region = Literal["midwest", "south", "west", "northeast"]
-Period = Literal["last_year", "full_window"] | conint(ge=2021, le=2025)
+Period = Literal["last_year", "full_window"] | int   # any year; the domain scopes out-of-window years
 
 class RankQuery(BaseModel):      tool: Literal["rank_hubs"]
                                  hazard: Hazard | Literal["overall"] = "overall"
@@ -119,7 +119,7 @@ Design choices:
 |---|---|---|
 | `rank_hubs` | filter by region/hubs → sort by `H_hazard` or `R` → top-n | `RankResult[rows: hub, score, label, top_drivers, flags]` |
 | `compare_hubs` | per-hazard `H`, `OBS`, `NRI` per hub; leader and gap per hazard | `CompareResult` |
-| `get_weather_stat` | SQL over `daily_weather` for hub, period → count / pct / per-year | `StatResult[value, condition, days_total, days_with_data, source]` |
+| `get_weather_stat` | filter the hub's daily rows to the period → count / pct / per-year | `StatResult[value, condition, matched_days, days_in_period, days_with_data, source]` |
 | `explain_hub` | composite breakdown: contributions `c_h`, `OBS` metrics, NRI percentiles, rank, premise check | `ExplainResult` |
 | `clarify` | none | the question is returned as the answer |
 
@@ -159,7 +159,7 @@ CREATE TABLE nri_hazard (
 );
 
 CREATE TABLE dataset_meta (
-    key   TEXT PRIMARY KEY,                -- window_start, window_end, open_meteo_url, nri_url, nri_retrieved_at, ingested_at
+    key   TEXT PRIMARY KEY,                -- window_start, window_end, open_meteo_url, nri_url, ingested_at
     value TEXT NOT NULL
 );
 ```
@@ -174,13 +174,13 @@ What is **not** stored, and why:
 | Method | Path | Body / query | Response | LLM? |
 |---|---|---|---|---|
 | POST | `/chat` | `{session_id?: str, message: str}` | `ChatResponse {session_id, answer: Answer, plan: QueryPlan, result: Result \| null}` | yes |
-| GET | `/hubs` | — | `[{hub_id, name, state, region, composite, label, peak_hazard}]` | no |
-| GET | `/hubs/{hub_id}` | — | `HubScore` (all hazards: `H`, `OBS`, `NRI`, contributions, flags) | no |
+| GET | `/hubs` | — | `[{hub_id, name, state, region, composite, label, peak_hazard, overall_rank}]` | no |
+| GET | `/hubs/{hub}` | — | `HubScore` (id or alias; all hazards: `score`, `observed_score`, `nri_score`, contributions, flags); 404 if unknown | no |
 | GET | `/rankings` | `hazard?`, `region?`, `top_n?` | `RankResult` | no |
-| GET | `/health` | — | `{status, dataset: dataset_meta, llm_model}` | no |
+| GET | `/health` | — | `{status, llm_model, llm_ready, scoring_version, dataset: dataset_meta}` | no |
 
 - The deterministic endpoints let the UI draw tables without the LLM. Tests and evals also use them as the **source of truth**.
-- Errors: `422` for invalid requests (Pydantic). If the LLM fails after its retries, `/chat` returns `200` with a graceful "couldn't interpret, try rephrasing" `Answer` and `plan = null`, so the chat never crashes.
+- Errors: `422` for invalid requests (Pydantic). `/chat` returns `503` with a setup hint when the LLM client can't be built (e.g. missing key); the deterministic endpoints keep working. The app refuses to start if `data/weather.db` is missing or empty. If the LLM fails after its retries, `/chat` returns `200` with a graceful "couldn't interpret, try rephrasing" `Answer` and `plan = null`, so the chat never crashes.
 
 ## 7. LLM client
 

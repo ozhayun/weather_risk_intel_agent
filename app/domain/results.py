@@ -15,7 +15,7 @@ class RankRow(BaseModel):
     name: str
     region: Region
     score: float
-    label: Label  # composite bands applied to `score`
+    label: Label | None  # composite label; None for single-hazard rankings (bands fit R only)
     top_drivers: list[Hazard]
     hazard_detail: HazardScore | None  # set when ranking by a single hazard
     flags: list[str]

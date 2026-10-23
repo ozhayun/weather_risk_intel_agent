@@ -120,3 +120,8 @@ def test_explain_unknown_hub(ctx):
 
 def test_rank_non_positive_top_n_returns_all(ctx):
     assert len(rank_hubs(ctx, top_n=-1).rows) == 3
+
+
+def test_hazard_ranking_rows_have_no_composite_label(ctx):
+    assert all(row.label is None for row in rank_hubs(ctx, hazard="winter").rows)
+    assert all(row.label is not None for row in rank_hubs(ctx).rows)

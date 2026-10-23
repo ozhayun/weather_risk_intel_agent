@@ -25,7 +25,11 @@ def api(method: str, path: str, **kwargs) -> dict | list | None:
         st.error(f"The agent API is not reachable at {API_URL}. {START_HINT}")
         return None
     if response.status_code >= 400:
-        st.error(response.json().get("detail", response.text))
+        try:
+            detail = response.json().get("detail", response.text)
+        except ValueError:
+            detail = response.text
+        st.error(f"API error {response.status_code}: {detail}")
         return None
     return response.json()
 
