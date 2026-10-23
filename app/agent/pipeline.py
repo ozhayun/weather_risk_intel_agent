@@ -29,6 +29,7 @@ log = logging.getLogger(__name__)
 INTERPRET_FAILED = (
     "I couldn't interpret that — try rephrasing, e.g. 'Rank Midwest hubs by winter risk'."
 )
+EXECUTE_FAILED = "I understood the question but couldn't compute the result. Please try rephrasing."
 NARRATE_FAILED = (
     "I computed the result (see the details panel) but couldn't phrase it reliably. "
     "Try asking again."
@@ -68,7 +69,11 @@ class Agent:
             return ChatOutcome(Answer(text=INTERPRET_FAILED), None, None)
         if isinstance(plan.action, Clarify):
             return ChatOutcome(Answer(text=plan.action.question), plan, None)
-        result = self.execute(plan)
+        try:
+            result = self.execute(plan)
+        except Exception:
+            log.exception("execute failed")
+            return ChatOutcome(Answer(text=EXECUTE_FAILED), plan, None)
         if result.kind == "scope":
             return ChatOutcome(Answer(text=result.message), plan, result)
         try:
