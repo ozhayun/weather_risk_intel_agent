@@ -1,4 +1,6 @@
-from app.agent.pipeline import Agent
+import pytest
+
+from app.agent.pipeline import HAZARD_COUNT, Agent
 from app.agent.prompts import interpret_messages
 from app.agent.schemas import Answer, QueryPlan
 from tests.fakes import FakeLLM
@@ -110,13 +112,13 @@ def test_lowest_order_reaches_the_executor(ctx):
 
 
 def test_clarify_turns_do_not_leak_their_plan_into_history(ctx):
-    clarify = plan(tool="clarify", question="No hurricane counts.", reason="hazard_count")
+    clarify = plan(tool="clarify", question="No forecasts, sorry.", reason="out_of_scope")
     llm = FakeLLM([clarify, plan(tool="rank_hubs"), ANSWER])
     agent = Agent(llm, ctx)
-    agent.run("s1", "How many hurricane days did Alpha have in 2025?")
+    agent.run("s1", "Will it snow at Alpha tomorrow?")
     agent.run("s1", "How many heavy rain days did Alpha have in 2025?")
     second = text_of(llm.calls[1].messages[1:])  # conversation only, not the system rules
-    assert "hazard_count" not in second and "No hurricane counts." not in second
+    assert "out_of_scope" not in second and "No forecasts, sorry." not in second
     assert "asked a clarifying question" in second
 
 
@@ -124,3 +126,39 @@ def test_hazard_count_text_only_when_message_mentions_hazard_events(ctx):
     llm = FakeLLM([plan(tool="clarify", question="Which year?", reason="hazard_count")])
     out = Agent(llm, ctx).run("s1", "How many heavy rain days did Alpha have in 2025?")
     assert "FEMA NRI" not in out.answer.text and out.answer.text == "Which year?"
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "How many flood days did Houston have in 2023?",
+        "How many storm days did Dallas have in 2024?",
+        "How many severe storm days did Kansas City have?",
+        "How many hurricane days did Miami have in 2024?",
+        "How many hurricanes hit Miami in 2022?",
+        "What percentage of days in Houston had flooding in 2023?",
+        "Count the tornado days in Dallas for 2021.",
+        "How many hail events did Denver see in 2025?",
+    ],
+)
+def test_hazard_event_counts_are_refused_before_the_llm(ctx, message):
+    llm = FakeLLM([])  # any LLM call would raise IndexError
+    out = Agent(llm, ctx).run("s1", message)
+    assert llm.calls == []
+    assert out.answer.text == HAZARD_COUNT
+    assert out.plan.action.tool == "clarify" and out.plan.action.reason == "hazard_count"
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "How many heavy rain days did Houston have in 2023?",
+        "How exposed is Houston to flood?",
+        "Compare Miami and Houston on hurricane exposure.",
+        "Rank the hubs by severe storms.",
+    ],
+)
+def test_supported_questions_about_these_hazards_still_reach_the_llm(ctx, message):
+    llm = FakeLLM([plan(tool="rank_hubs"), ANSWER])
+    Agent(llm, ctx).run("s1", message)
+    assert len(llm.calls) == 2
