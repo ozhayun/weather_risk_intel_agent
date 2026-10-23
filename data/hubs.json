@@ -1,0 +1,181 @@
+[
+  {
+    "hub_id": "chicago",
+    "name": "Chicago (Wheeling)",
+    "state": "IL",
+    "region": "midwest",
+    "lat": 42.139,
+    "lon": -87.929,
+    "county_fips": "17031",
+    "source_id": "FedEx Ground WHIL 5602",
+    "aliases": [
+      "chicago",
+      "wheeling"
+    ]
+  },
+  {
+    "hub_id": "indianapolis",
+    "name": "Indianapolis",
+    "state": "IN",
+    "region": "midwest",
+    "lat": 39.768,
+    "lon": -86.158,
+    "county_fips": "18097",
+    "source_id": "FedEx Ground ININ 5465",
+    "aliases": [
+      "indy"
+    ]
+  },
+  {
+    "hub_id": "detroit",
+    "name": "Detroit",
+    "state": "MI",
+    "region": "midwest",
+    "lat": 42.331,
+    "lon": -83.046,
+    "county_fips": "26163",
+    "source_id": "FedEx Ground DTMI 5481",
+    "aliases": []
+  },
+  {
+    "hub_id": "minneapolis",
+    "name": "Minneapolis",
+    "state": "MN",
+    "region": "midwest",
+    "lat": 44.978,
+    "lon": -93.265,
+    "county_fips": "27053",
+    "source_id": "FedEx Ground MPMN 5552",
+    "aliases": [
+      "twin cities"
+    ]
+  },
+  {
+    "hub_id": "st_louis",
+    "name": "St. Louis",
+    "state": "MO",
+    "region": "midwest",
+    "lat": 38.627,
+    "lon": -90.199,
+    "county_fips": "29510",
+    "source_id": "FedEx Ground STMO 5631",
+    "aliases": [
+      "saint louis"
+    ]
+  },
+  {
+    "hub_id": "kansas_city",
+    "name": "Kansas City",
+    "state": "KS",
+    "region": "midwest",
+    "lat": 39.114,
+    "lon": -94.627,
+    "county_fips": "20209",
+    "source_id": "FedEx Ground KCKS 5648",
+    "aliases": [
+      "kc"
+    ]
+  },
+  {
+    "hub_id": "miami",
+    "name": "Miami",
+    "state": "FL",
+    "region": "south",
+    "lat": 25.762,
+    "lon": -80.192,
+    "county_fips": "12086",
+    "source_id": "FedEx Express MIA gateway",
+    "aliases": []
+  },
+  {
+    "hub_id": "houston",
+    "name": "Houston",
+    "state": "TX",
+    "region": "south",
+    "lat": 29.76,
+    "lon": -95.37,
+    "county_fips": "48201",
+    "source_id": "FedEx Ground HOTX 5771",
+    "aliases": []
+  },
+  {
+    "hub_id": "dallas",
+    "name": "Dallas",
+    "state": "TX",
+    "region": "south",
+    "lat": 32.777,
+    "lon": -96.797,
+    "county_fips": "48113",
+    "source_id": "FedEx Ground DLTX 5751",
+    "aliases": [
+      "dfw",
+      "dallas-fort worth"
+    ]
+  },
+  {
+    "hub_id": "atlanta",
+    "name": "Atlanta",
+    "state": "GA",
+    "region": "south",
+    "lat": 33.749,
+    "lon": -84.388,
+    "county_fips": "13121",
+    "source_id": "FedEx Ground ATGA 5303",
+    "aliases": []
+  },
+  {
+    "hub_id": "memphis",
+    "name": "Memphis",
+    "state": "TN",
+    "region": "south",
+    "lat": 35.15,
+    "lon": -90.049,
+    "county_fips": "47157",
+    "source_id": "FedEx Ground METN 5379",
+    "aliases": []
+  },
+  {
+    "hub_id": "denver",
+    "name": "Denver",
+    "state": "CO",
+    "region": "west",
+    "lat": 39.739,
+    "lon": -104.99,
+    "county_fips": "08031",
+    "source_id": "FedEx Ground DNCO 5802",
+    "aliases": []
+  },
+  {
+    "hub_id": "phoenix",
+    "name": "Phoenix",
+    "state": "AZ",
+    "region": "west",
+    "lat": 33.448,
+    "lon": -112.074,
+    "county_fips": "04013",
+    "source_id": "FedEx Ground PHAZ 5854",
+    "aliases": []
+  },
+  {
+    "hub_id": "seattle",
+    "name": "Seattle",
+    "state": "WA",
+    "region": "west",
+    "lat": 47.606,
+    "lon": -122.332,
+    "county_fips": "53033",
+    "source_id": "FedEx Ground SEWA 5983",
+    "aliases": []
+  },
+  {
+    "hub_id": "newark",
+    "name": "Newark",
+    "state": "NJ",
+    "region": "northeast",
+    "lat": 40.736,
+    "lon": -74.172,
+    "county_fips": "34013",
+    "source_id": "FedEx Ground NENJ 5095",
+    "aliases": []
+  }
+]

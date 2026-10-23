@@ -1,0 +1,34 @@
+[project]
+name = "weather-risk-intel-agent"
+version = "0.1.0"
+description = "AI agent that ranks and explains weather-disruption risk for US logistics hubs"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "pydantic>=2",
+    "pydantic-settings",
+    "instructor",
+    "openai",
+    "httpx",
+    "streamlit",
+]
+
+[dependency-groups]
+dev = ["pytest", "ruff"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+addopts = "-m 'not eval'"
+markers = ["eval: runs the real LLM (needs an API key)"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["*.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
