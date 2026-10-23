@@ -141,3 +141,13 @@ def test_rank_lowest_with_hazard_region_and_top_n(ctx):
 
 def test_rank_default_order_is_highest(ctx):
     assert rank_hubs(ctx).order == "highest"
+
+
+def test_period_scope_message_offers_the_window_not_the_hub_list(ctx):
+    r = get_weather_stat(ctx, "Alpha", "snow_day", "count", 2018)
+    assert "2025" in r.message and "not 2018" in r.message
+    assert "Gamma" not in r.message  # hub list only belongs to unknown-hub messages
+
+
+def test_unknown_hub_scope_message_still_lists_hubs(ctx):
+    assert "Gamma" in get_weather_stat(ctx, "Boston", "snow_day", "count", 2025).message
