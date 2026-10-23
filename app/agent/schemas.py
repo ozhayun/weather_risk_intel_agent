@@ -80,7 +80,7 @@ def _numbers(text: str) -> list[float]:
 def _is_grounded(n: float, allowed: list[float]) -> bool:
     if n in _ALWAYS_ALLOWED:
         return True
-    tolerance = 0.5 if n.is_integer() else 0.05
+    tolerance = (0.5 if n.is_integer() else 0.05) + 1e-9  # float slack at x.x5 rounding
     return any(abs(n - v) <= tolerance for v in allowed)
 
 
@@ -95,7 +95,8 @@ class Answer(BaseModel):
         if result is None:
             return self
         allowed = _numbers(result.model_dump_json())
-        ungrounded = [n for n in _numbers(self.text) if not _is_grounded(n, allowed)]
+        written = " ".join([self.text, *self.caveats])
+        ungrounded = [n for n in _numbers(written) if not _is_grounded(n, allowed)]
         if ungrounded:
             raise ValueError(
                 f"ungrounded numbers: {ungrounded}. Use only numbers present in the result."
