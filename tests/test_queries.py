@@ -8,7 +8,7 @@ def test_rank_region_filters_and_sorts(ctx):
     assert r.kind == "rank"
     assert [row.hub_id for row in r.rows] == ["a", "b"]
     assert r.rows[0].score >= r.rows[1].score
-    assert r.rows[0].hazard_detail.obs_metrics["snow_days"] > 0
+    assert r.rows[0].hazard_detail.observed_days_per_year["snow_days"] > 0
 
 
 def test_rank_overall_uses_composite_and_drivers(ctx):
@@ -74,7 +74,8 @@ def test_compare_duplicate_hub_is_scope(ctx):
 def test_stat_pct_of_days(ctx):
     r = get_weather_stat(ctx, "Alpha", "snow_day", "pct_of_days", 2025)
     assert r.kind == "stat"
-    assert r.value == 20.0 and r.days_total == 10 and r.days_with_data == 10
+    assert r.value == 20.0 and r.matched_days == 2
+    assert r.days_in_period == 10 and r.days_with_data == 10
     assert r.condition == "snowfall_cm >= 0.1"
 
 

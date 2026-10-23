@@ -47,7 +47,8 @@ class StatResult(BaseModel):
     aggregation: Aggregation
     period_label: str
     value: float  # pct_of_days is a percentage 0–100
-    days_total: int
+    matched_days: int  # days meeting the condition
+    days_in_period: int
     days_with_data: int
     source: str
     caveats: list[str]
